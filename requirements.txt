@@ -1,4 +1,9 @@
-# TODO: pin once the recon phase (README milestone 1) settles the approach.
-# Likely candidates:
-#   pymem           # raw memory read/write, if that's the chosen path
-#   websockets      # Archipelago CommonClient network transport
+# Recon settled on UE4SS (file-polling bridge), not raw pymem offsets --
+# see research/NOTES.md. client.py's only real runtime dependency is
+# Archipelago core itself (CommonClient/NetUtils/worlds), vendored as a
+# pinned submodule rather than a pip package since it isn't published as
+# one. Delegating to its own requirements.txt here means `pip install -r
+# requirements.txt` pulls in everything in one step, in CI and locally,
+# instead of every command/doc needing to separately remember the
+# submodule path.
+-r Archipelago/requirements.txt

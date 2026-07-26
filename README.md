@@ -28,17 +28,16 @@ cd mgsdelta-connector
 
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
+.venv/bin/pip install -r requirements.txt  # real Archipelago core, needed to run tests
 ```
 
 Archipelago core is vendored as a pinned submodule (`Archipelago/`, same
-pattern as `mgsdelta-apworld`) for the eventual `CommonClient` subclass in
-`client.py` — nothing currently imports from it yet, so it isn't needed to
-run the test suite today, just cloned for when it is.
-`requirements.txt` is still mostly a placeholder — `memory.py`,
-`game_state.py`, and `item_effects.py` are real now (file-based bridge +
-duck-counter read/write logic), but `client.py`'s real AP server session
-is still a stub. `.venv/bin/pytest --cov` should pass as-is. See
-[`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full check suite.
+pattern as `mgsdelta-apworld`) for `client.py`'s real `CommonContext`
+subclass. `requirements.txt` just delegates to
+`Archipelago/requirements.txt` via pip's `-r` file reference, so this one
+command pulls in everything rather than every doc/CI step needing to
+separately remember the submodule path. `.venv/bin/pytest --cov` should
+pass. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full check suite.
 
 ## Recon findings (architecture now committed)
 
