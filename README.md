@@ -81,10 +81,13 @@ reimplementing the network protocol.
 
 ## Status
 
-Tooling/CI scaffold done (lint, types, tests+coverage, mutation testing — see
-[`CONTRIBUTING.md`](./CONTRIBUTING.md)). No connector logic yet. Next concrete
-step is #1 (anti-cheat / engine recon). Findings should get logged in
-`research/NOTES.md` as they come in.
+As of 2026-07-26: tooling/CI fully wired and green on GitHub (lint, types,
+tests+coverage, mutation testing, Codecov upload all confirmed working —
+see [`CONTRIBUTING.md`](./CONTRIBUTING.md)). No connector logic yet — every
+`.py` file is still a stub. **Recon (milestone 1 below) hasn't started: it
+was blocked on not having a PC with the game installed.** See
+`research/NOTES.md` for the exact checklist to pick up from — nothing in
+that log has been investigated yet, so start at the top.
 
 ## Development
 
@@ -92,15 +95,8 @@ Clean code/architecture rules (including the ports-and-adapters split that
 keeps I/O out of the testable logic), the 100%-logic-tested policy, and how
 to run the full check suite locally are in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
-### One-time setup after pushing to GitHub
-
-CI (lint/types/tests/mutation testing) works immediately with no setup. The
-Codecov badge needs one manual step first: sign in to
-[codecov.io](https://codecov.io) with GitHub, enable this repo, copy its
-upload token, then add it as a repository secret named `CODECOV_TOKEN`
-(Settings → Secrets and variables → Actions) here on GitHub. Until that's
-done, the `codecov-action` upload step in CI will fail — everything else is
-unaffected.
+CI and Codecov are already fully configured and working — no setup needed
+before starting recon work.
 
 ## Legal / scope note
 
