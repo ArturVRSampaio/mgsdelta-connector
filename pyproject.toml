@@ -9,7 +9,7 @@ dependencies = []
 dev = [
     "ruff==0.6.9",
     "mypy==1.11.2",
-    "pytest==8.3.3",
+    "pytest==9.0.3",  # 8.3.3 has CVE-2025-71176 (insecure tmpdir handling)
     "pytest-cov==5.0.0",
     "mutmut==3.2.2",
 ]

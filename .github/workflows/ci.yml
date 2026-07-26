@@ -30,7 +30,10 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest --cov --cov-report=term-missing --cov-report=xml
       - run: python scripts/check_coverage.py
+      # Non-blocking: Codecov visibility shouldn't gate CI or the mutation
+      # job below, especially before CODECOV_TOKEN is added as a repo secret.
       - uses: codecov/codecov-action@v5
+        continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
