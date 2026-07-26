@@ -39,6 +39,17 @@ max-complexity = 8
 python_version = "3.12"
 strict = true
 files = ["src", "tests", "scripts"]
+# Archipelago core (CommonClient/NetUtils/worlds) intentionally stays off
+# mypy_path: pointing mypy at the submodule would make it follow imports
+# into every bundled game world, which isn't our code and isn't mypy-clean
+# (see mgsdelta-apworld's identical note). These two imports stay
+# unresolved (-> Any) instead, and we only relax the one strict check that
+# matters for subclassing an Any-typed external base.
+disallow_subclassing_any = false
+
+[[tool.mypy.overrides]]
+module = ["CommonClient", "NetUtils", "worlds"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

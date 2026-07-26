@@ -1,6 +1,8 @@
 from typing import Any
 
-from mgsdelta_connector.item_effects import UNLOCK_DUCK_ITEM_NAME, grant_item
+from NetUtils import NetworkItem
+
+from mgsdelta_connector.item_effects import UNLOCK_DUCK_ITEM_NAME, grant_item, items_to_grant
 
 
 class FakeWriter:
@@ -27,3 +29,27 @@ def test_grant_item_returns_false_for_unknown_item() -> None:
 
     assert result is False
     assert writer.written == []
+
+
+def test_items_to_grant_returns_all_items_when_none_granted_yet() -> None:
+    items = [
+        NetworkItem(item=100, location=1, player=1),
+        NetworkItem(item=200, location=2, player=1),
+    ]
+
+    assert items_to_grant(items, already_granted=[]) == [(0, 100), (1, 200)]
+
+
+def test_items_to_grant_skips_already_granted_indices() -> None:
+    items = [
+        NetworkItem(item=100, location=1, player=1),
+        NetworkItem(item=200, location=2, player=1),
+    ]
+
+    assert items_to_grant(items, already_granted=[0]) == [(1, 200)]
+
+
+def test_items_to_grant_empty_when_all_granted() -> None:
+    items = [NetworkItem(item=100, location=1, player=1)]
+
+    assert items_to_grant(items, already_granted=[0]) == []

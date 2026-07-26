@@ -110,11 +110,19 @@ reimplementing the network protocol.
    `GakoSetCollected()` call also works, but only provably so on a duck
    that isn't already collected — worth revisiting once milestone 4 needs
    a real collect-style write.)
-4. **Vertical slice with the apworld**: wire steps 2+3 into `client.py`'s AP
-   session — collecting one real duck sends a real check to a real
-   Archipelago server; the server sending one real item back actually grants
-   it in-game. This is the project's proof-of-concept milestone, matched to the
-   apworld repo's milestone 3.
+4. **Vertical slice with the apworld** (in progress): wire steps 2+3 into
+   `client.py`'s AP session — collecting one real duck sends a real check to a
+   real Archipelago server; the server sending one real item back actually
+   grants it in-game. `memory.py`/`game_state.py`/`item_effects.py` are real
+   now, and `client.py`'s `MGSDeltaContext` (a real `CommonContext` subclass —
+   session/auth/poll loop) is implemented and 100% tested. What's left: the
+   UE4SS-side Lua script that actually writes `state.json`/reads
+   `commands.json` (currently only a manual probe, see `research/probes/`),
+   `mgsdelta-apworld` growing real duck locations to replace the placeholder
+   reuse of its frog IDs (see `game_state.py`'s `LOCATION_BASE_ID` comment),
+   and an actual live run against a real generated seed + local AP server.
+   This is the project's proof-of-concept milestone, matched to the apworld
+   repo's milestone 3.
 5. **Expand the memory map**: grow `game_state.py`/`item_effects.py` to cover
    the full item/location set as the apworld repo's tables grow — one
    location/item is added to the apworld only once it's confirmed working here.
@@ -125,20 +133,24 @@ reimplementing the network protocol.
 
 ## Status
 
-As of 2026-07-26: **milestones 1, 2, and 3 are all done**: no anti-cheat,
-engine confirmed UE 5.3, UE4SS fully working (see `research/NOTES.md` for
-the exact recipe), a real live value — the duck ("Gako") collectible
-counter — successfully read through it via a Lua mod (confirmed matching
-the in-game HUD), and a real write confirmed via a full
-read/write/read-back/restore round trip on a live actor's property.
-`memory.py` (file-based bridge), `game_state.py` (duck-counter read logic),
-and `item_effects.py` (duck-unlock write logic) are real now, each 100%
-tested. `client.py` is still a stub — it needs a real `CommonClient`
-subclass, which is a substantially bigger task on its own (async websocket
-session, server auth, reconnection) and is milestone 4's actual remaining
-work. **Scope note**: the duck collectible is the first real target (not
-frogs) — same subsystem, but the frog aggregate-count function isn't found
-yet and ducks already work end to end for both read and write.
+As of 2026-07-26: **milestones 1, 2, and 3 are all done**, and **milestone
+4 is well underway**: no anti-cheat, engine confirmed UE 5.3, UE4SS fully
+working (see `research/NOTES.md` for the exact recipe), a real live value —
+the duck ("Gako") collectible counter — successfully read through it via a
+Lua mod (confirmed matching the in-game HUD), and a real write confirmed via
+a full read/write/read-back/restore round trip on a live actor's property.
+`memory.py` (file-based bridge), `game_state.py` (duck-counter read logic +
+location-ID mapping), `item_effects.py` (duck-unlock write logic +
+received-item tracking), and `client.py` (a real `MGSDeltaContext`
+`CommonContext` subclass — session/auth/poll loop) are all real and 100%
+tested now (Archipelago vendored as a submodule for the `CommonContext`
+import). What's not done yet: the actual in-game Lua script that writes
+`state.json`/reads `commands.json` on a timer (only a manual probe exists
+today), matching duck locations on the `mgsdelta-apworld` side, and a real
+live run against a generated seed + local AP server. **Scope note**: the
+duck collectible is the first real target (not frogs) — same subsystem, but
+the frog aggregate-count function isn't found yet and ducks already work
+end to end for both read and write.
 
 ## Development
 

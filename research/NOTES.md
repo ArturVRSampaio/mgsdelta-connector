@@ -335,3 +335,59 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
 - **Follow-up**: this unblocks actually writing `memory.py` and the
   corresponding in-game Lua script for milestone 4, instead of leaving the
   connector's core architecture question unanswered.
+
+### 2026-07-26: memory.py/game_state.py/item_effects.py/client.py implemented
+
+- **What landed**: real code (100% tested, mutation-tested) for all four
+  planned modules:
+  - `memory.py`'s `FileBridge` implements the file-polling bridge above —
+    plain `json.loads`/`Path.write_text`, fully testable against real files
+    via pytest's `tmp_path` (no mocking needed, unlike raw process memory
+    or a real socket).
+  - `game_state.py` detects newly-unlocked ducks between two state reads
+    (`newly_unlocked_count`, never negative — handles a reloaded save) and
+    maps a duck count to the location IDs that should be checked
+    (`locations_to_check`).
+  - `item_effects.py` maps the `"Unlock Duck"` item name to a write command
+    (`grant_item`) and tracks which received-item indices still need
+    granting (`items_to_grant`).
+  - `client.py`'s `MGSDeltaContext` is a real `CommonContext` subclass
+    (`game`, `items_handling`, `server_auth`, a `poll_once`/`poll_forever`
+    loop) wiring the above to Archipelago's actual network layer.
+- **Architecture note that mattered**: `client.py`'s own architecture rule
+  ("network calls only, no game-logic decisions") meant the location/item
+  decision logic had to live in `game_state.py`/`item_effects.py`, not
+  `client.py` itself — this was deliberately restructured partway through
+  once that became clear, keeping `client.py` as thin as physically
+  possible.
+- **Testing surprise**: expected to need heavy mocking or blanket
+  `# pragma: no cover` to test a `CommonContext` subclass at all, but most
+  of it turned out to be genuinely testable with a *real* (not mocked)
+  context, because the relevant methods safely no-op with no live
+  connection: `check_locations()` intersects with `self.missing_locations`,
+  which is `set()` by default; `send_msgs()` returns immediately if
+  `self.server` is `None`; `lookup_in_game()` is a local datapackage
+  lookup, not a network call. Only one line (`super().server_auth(...)`,
+  the interactive-password path) needed an actual `# pragma: no cover`.
+  Constructing a real `MGSDeltaContext` needs a running event loop (it
+  schedules a `keep_alive` background task in `__init__`) — wrapped each
+  test in `asyncio.run(...)`, cancelling the task afterward.
+- **Gotcha**: `CommonContext.__init__` hard-crashes (`KeyError`) if
+  `self.game` isn't already a registered game in the local Archipelago
+  checkout's `network_data_package` — true in a real deployment (where
+  mgsdelta-apworld would actually be installed), not true in this repo's
+  bare vendored submodule. Fixed in tests with an autouse
+  `monkeypatch.setitem(network_data_package["games"], GAME_NAME, {...})`
+  fixture, not a real dependency on the apworld repo.
+- **What's NOT done**: the actual in-game Lua script that writes
+  `state.json`/reads `commands.json` on a timer (today there's only the
+  manual `Ctrl+Num`-keybind probe in `research/probes/`), and
+  `mgsdelta-apworld` growing real duck locations — `client.py` currently
+  reuses apworld's existing frog-ID scheme (`LOCATION_BASE_ID` in
+  `game_state.py`) as a placeholder, treating "location N" as "the duck
+  count reached N" rather than any specific real duck. No live run against
+  an actual generated seed + local AP server has happened yet either.
+- **Confidence**: high for everything unit-tested (100% coverage,
+  mutation-tested in CI). Zero confidence yet on the full pipeline
+  actually working live end to end — that's the real remaining
+  milestone-4 work.

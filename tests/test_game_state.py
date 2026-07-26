@@ -1,6 +1,14 @@
 from typing import Any
 
-from mgsdelta_connector.game_state import DuckCounts, newly_unlocked_count, read_duck_counts
+from mgsdelta_connector.game_state import (
+    LOCATION_BASE_ID,
+    LOCATION_COUNT,
+    DuckCounts,
+    location_ids_for_count,
+    locations_to_check,
+    newly_unlocked_count,
+    read_duck_counts,
+)
 
 
 class FakeReader:
@@ -39,3 +47,40 @@ def test_newly_unlocked_count_never_negative() -> None:
     current = DuckCounts(unlocked=34, total=64)  # e.g. an earlier save was reloaded
 
     assert newly_unlocked_count(previous, current) == 0
+
+
+def test_location_ids_for_count_returns_ids_from_base() -> None:
+    expected = [LOCATION_BASE_ID, LOCATION_BASE_ID + 1, LOCATION_BASE_ID + 2]
+
+    assert location_ids_for_count(3) == expected
+
+
+def test_location_ids_for_count_caps_at_location_count() -> None:
+    ids = location_ids_for_count(LOCATION_COUNT + 10)
+
+    assert len(ids) == LOCATION_COUNT
+    assert ids[-1] == LOCATION_BASE_ID + LOCATION_COUNT - 1
+
+
+def test_locations_to_check_is_empty_with_no_previous_state() -> None:
+    current = DuckCounts(unlocked=34, total=64)
+
+    assert locations_to_check(None, current) == []
+
+
+def test_locations_to_check_is_empty_when_count_did_not_grow() -> None:
+    previous = DuckCounts(unlocked=34, total=64)
+    current = DuckCounts(unlocked=34, total=64)
+
+    assert locations_to_check(previous, current) == []
+
+
+def test_locations_to_check_returns_ids_up_to_new_count() -> None:
+    previous = DuckCounts(unlocked=1, total=64)
+    current = DuckCounts(unlocked=3, total=64)
+
+    assert locations_to_check(previous, current) == [
+        LOCATION_BASE_ID,
+        LOCATION_BASE_ID + 1,
+        LOCATION_BASE_ID + 2,
+    ]

@@ -40,3 +40,26 @@ def newly_unlocked_count(previous: DuckCounts | None, current: DuckCounts) -> in
     if previous is None:
         return 0
     return max(0, current.unlocked - previous.unlocked)
+
+
+# Location IDs must match mgsdelta-apworld's Locations.py exactly. This
+# reuses the existing "Kerotan Frog N" ID scheme (BASE_ID + index) as
+# placeholder location identities for duck-unlock-count thresholds, since
+# apworld's location tables don't have real duck-specific entries yet --
+# location N is checked once the live duck-unlock count reaches N. See
+# research/NOTES.md milestone 4 for why.
+LOCATION_BASE_ID = 3_901_000
+LOCATION_COUNT = 64
+
+
+def location_ids_for_count(count: int) -> list[int]:
+    """Location IDs that should be checked once `count` ducks are unlocked."""
+    capped = min(count, LOCATION_COUNT)
+    return [LOCATION_BASE_ID + i for i in range(capped)]
+
+
+def locations_to_check(previous: DuckCounts | None, current: DuckCounts) -> list[int]:
+    """Which location IDs newly need checking, given the previous and current duck counts."""
+    if newly_unlocked_count(previous, current) <= 0:
+        return []
+    return location_ids_for_count(current.unlocked)
