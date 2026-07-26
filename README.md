@@ -46,20 +46,17 @@ README for the pattern. `.venv/bin/pytest --cov` should pass as-is. See
   run, no AC process spawns. Module enumeration against the live process
   also succeeded cleanly (156 modules, no access-denied), meaning it isn't
   running as a protected process either. See `research/NOTES.md` for detail.
-- **Engine**: the game is Unreal Engine (5) — **confirmed** from the install
-  layout (`Engine/` folder, `MGSDelta-Win64-Shipping.exe` naming).
-  [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) **does inject and hook this
-  game's core functions** (`GMalloc`, `FName`, `StaticConstructObject_Internal`
-  all resolve automatically), but its `GUObjectArray` pattern — the piece
-  it needs for almost everything past basic hooking — doesn't match this
-  build under any of engine versions 5.1–5.6 tried so far. This game isn't
-  in UE4SS's community config database yet. **Open decision, not yet made**:
-  invest in a custom `GUObjectArray` AOB signature (keeps the UE4SS path,
-  needs a disassembler and real reverse-engineering work) vs. switch to raw
-  memory access via `pymem` (the process allows free `OpenProcess`/module
-  access, confirmed above, so this path is viable too — just a different
-  offset-hunting effort). See `research/NOTES.md` for the full log.
-- **Save-game feasibility as a fallback**: now low-priority given how clean
+- **Engine**: the game is Unreal Engine 5, specifically **UE 5.3** —
+  **confirmed**. [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) **fully
+  works against this game**: using the `experimental` dev build
+  (`zDEV-UE4SS_v3.0.1-464-gc343a32.zip`) plus a community-contributed
+  `GUObjectArray.lua` signature
+  ([mattdavida/MGS-Delta-UE4SS-Fix](https://github.com/mattdavida/MGS-Delta-UE4SS-Fix))
+  plus `EngineVersionOverride = 5.3`, UE4SS resolves every core signature,
+  constructs all core UObject classes, dumps full member offsets, hooks
+  native functions, and runs its bundled Lua mods — confirmed live against
+  a real game session. See `research/NOTES.md` for the full recipe and log.
+- **Save-game feasibility as a fallback**: no longer needed given how clean
   the anti-cheat/access results are — only revisit if UE4SS or raw memory
   access hits an unexpected wall.
 - **Patch churn**: every game update can move memory offsets. The design should
@@ -113,14 +110,14 @@ reimplementing the network protocol.
 As of 2026-07-26: tooling/CI fully wired and green on GitHub (lint, types,
 tests+coverage, mutation testing, Codecov upload all confirmed working —
 see [`CONTRIBUTING.md`](./CONTRIBUTING.md)). No connector logic yet — every
-`.py` file is still a stub. **Recon (milestone 1) is mostly done**: no
-anti-cheat, UE5 confirmed, and UE4SS injects/hooks this game's core
-functions — but its `GUObjectArray` signature doesn't match this build
-under any engine version tried (5.1–5.6), so it's not fully usable yet
-without a custom AOB signature. See `research/NOTES.md` for the full log.
-**Blocked on a decision**: build a custom UE4SS signature for this game vs.
-switch to raw memory access (`pymem`) instead — both are real work, not a
-quick fix, and picking one determines the rest of this repo's architecture.
+`.py` file is still a stub, but **recon (milestone 1) is fully done**: no
+anti-cheat, engine confirmed UE 5.3, and UE4SS is fully working against a
+real running game session (core signatures resolve, all UObject classes
+construct, member offsets dump, native hooks register, bundled Lua mods
+run) using the experimental UE4SS build + a community `GUObjectArray.lua`
+signature + `EngineVersionOverride 5.3` — see `research/NOTES.md` for the
+exact recipe. Next: milestone 2, read one real flag (e.g. a frog-collected
+bit) via UE4SS's live object/property access.
 
 ## Development
 

@@ -7,10 +7,11 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
 
 - [x] Does MGS Δ ship with Easy Anti-Cheat or another anti-cheat? — **No.**
 - [x] Engine confirmation (assumed UE5 — verify build/version). — **Confirmed UE5.**
-- [x] Is UE4SS viable for this game specifically? — **Yes, injection works; needs
-      a manual engine-version/signature config (not yet in UE4SS's known-games
-      list). See log below.**
-- [ ] Are save files readable/diffable as a fallback path?
+- [x] Is UE4SS viable for this game specifically? — **Yes, fully working.**
+      Uses the experimental dev build + a community `GUObjectArray.lua`
+      signature + `EngineVersionOverride 5.3`. Full recipe below.
+- [ ] Are save files readable/diffable as a fallback path? — no longer needed;
+      UE4SS is fully functional, see below.
 
 ## Log
 
@@ -133,3 +134,64 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   Neither is a quick follow-up — both are their own multi-session research
   efforts. Recommend deciding which one to invest in before writing any
   more connector code.
+
+### 2026-07-26: UE4SS fully working — found an existing community fix
+
+- **Finding**: rather than hand-building a `GUObjectArray` AOB signature
+  from scratch, checked whether anyone had already modded this game with
+  UE4SS. They had: [mattdavida/MGS-Delta-UE4SS-Fix](https://github.com/mattdavida/MGS-Delta-UE4SS-Fix)
+  is a small public repo that exists specifically to solve this exact
+  problem, published the same day MGS Δ hit early access. Following its
+  instructions **fully resolved UE4SS against this game**:
+  1. Used the **experimental dev build** `zDEV-UE4SS_v3.0.1-464-gc343a32.zip`
+     (from UE4SS-RE/RE-UE4SS's `experimental` release tag, not the stable
+     `v3.0.1` release — the stable build was what we tried before and it
+     doesn't include this fix) — extracted with its `dwmapi.dll` at the zip
+     root and everything else nested under `ue4ss/`, flattened together
+     into `MGSDelta\Binaries\Win64\`.
+  2. Copied the fix repo's `UE4SS_Signatures/GUObjectArray.lua` (a hand-built
+     AOB pattern targeting a `LEA` instruction sequence, with a documented
+     comment confirming **this game is UE 5.3**) into
+     `Binaries\Win64\UE4SS_Signatures\`.
+  3. Set `[EngineVersionOverride]` to `MajorVersion = 5` / `MinorVersion = 3`
+     in `UE4SS-settings.ini`.
+  4. Relaunched via Steam.
+- **Result**: `UE4SS.log` shows `PS scan successful`, then
+  `GUObjectArray address: 0x7ff6dfd7adb0 <- Lua Script`, then all 23 core
+  UObject classes (`Class`, `CoreUObject`, `Struct`, `Pawn`, `Character`,
+  `Actor`, `Vector`, `PlayerController`, `Widget`, ...) constructed
+  successfully, followed by a full member-offset dump for `UObjectBase`,
+  `UWorld`, `UClass`, `UFunction`, `FProperty`, etc. — hundreds of lines,
+  meaning UE4SS now has complete structural knowledge of this build's
+  object model. All bundled example mods (`CheatManagerEnablerMod`,
+  `ConsoleCommandsMod`, `ConsoleEnablerMod`, `LineTraceMod`,
+  `BPML_GenericFunctions`, `BPModLoaderMod`, `Keybinds`) started and
+  registered native hooks successfully. UE4SS reached its normal
+  `Event loop start` state.
+  - Confirmed the game itself is healthy, not just UE4SS: process window
+    title changed from the UE4SS debug console back to
+    `METAL GEAR SOLID Δ: SNAKE EATER` (the real game window), and the
+    process was `Responding: True`.
+  - Two non-fatal warnings logged (`GNatives not found` — "limited hooking
+    functionality in certain scenarios", and a couple of Lua warnings about
+    `ConsoleClass`/`ViewportConsole`/`UWorld` being invalid at the moment
+    a mod first ran) — these look like normal "game hasn't fully loaded
+    into a level yet" noise, not blockers. Not yet verified whether they
+    matter once the game reaches the main menu/gameplay.
+- **The exact working recipe** (for reproducing this or wiring it into
+  future setup docs):
+  - UE4SS build: `zDEV-UE4SS_v3.0.1-464-gc343a32.zip` from the
+    `experimental` release tag of `UE4SS-RE/RE-UE4SS`.
+  - `UE4SS_Signatures/GUObjectArray.lua`: copied verbatim from
+    `mattdavida/MGS-Delta-UE4SS-Fix`.
+  - `UE4SS-settings.ini`: `[EngineVersionOverride]` → `MajorVersion = 5`,
+    `MinorVersion = 3`.
+- **Confidence**: high — this isn't a partial result, it's the full UE4SS
+  feature set (object construction, member offsets, native hooks, Lua mods)
+  working end to end.
+- **Follow-up**: this closes recon (build plan milestone 1) entirely — no
+  more open questions. Next is build plan milestone 2: read one flag (find
+  and reliably read a single stable value, e.g. a frog-collected bit),
+  using UE4SS's live object/property access now that it's confirmed
+  working. `config.py` should record this exact UE4SS build + signature +
+  engine-version recipe so it's reproducible without re-deriving it.
