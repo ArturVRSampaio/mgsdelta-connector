@@ -18,6 +18,25 @@ Concretely, it needs to do two things, continuously, while the game runs:
 The game has **no mod API or scripting support today**, so this repo starts from
 a reverse-engineering standing start, not from a plugin SDK.
 
+## Install
+
+```bash
+git clone https://github.com/ArturVRSampaio/mgsdelta-connector.git
+cd mgsdelta-connector
+
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+```
+
+`requirements.txt` is still a placeholder (see below) — every module is a
+stub, so there's nothing runtime-installable yet beyond the dev tooling.
+Once recon picks an approach (`pymem`, UE4SS, or save-diffing) and
+`client.py` starts subclassing Archipelago's `CommonClient`, this section
+will grow real runtime dependencies, likely including a pinned Archipelago
+core checkout the same way `mgsdelta-apworld` vendors one — see that repo's
+README for the pattern. `.venv/bin/pytest --cov` should pass as-is. See
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full check suite.
+
 ## Open questions to resolve before committing to an architecture
 
 - **Anti-cheat**: does MGS Δ ship with Easy Anti-Cheat or similar? It's a
@@ -126,5 +145,5 @@ online features.
 
 ## License
 
-TBD — pick something compatible with Archipelago's own license (MIT) before
-any public release.
+[MIT](./LICENSE) — matches Archipelago core's own license, since this
+client is meant to plug into an Archipelago server/session.
