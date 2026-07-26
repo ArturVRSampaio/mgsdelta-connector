@@ -50,6 +50,19 @@ def _has_any_logic(paths_to_mutate: list[str], do_not_mutate: list[str]) -> bool
 
 
 def _diff_base() -> str | None:
+    """Best base ref to diff HEAD against, skipping any candidate that IS HEAD.
+
+    After a direct push to main, `origin/main` already points at HEAD, so a
+    merge-base against it trivially returns HEAD itself -- diffing HEAD
+    against HEAD always shows zero changes, which would make every direct
+    push to main silently skip mutation testing forever. Falling through to
+    HEAD~1 (the actual previous commit) when that happens is what makes
+    this work for both PRs (real base ref, behind HEAD) and direct pushes.
+    """
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], check=False, capture_output=True, text=True
+    ).stdout.strip()
+
     base_ref = os.environ.get("GITHUB_BASE_REF")
     candidates = ([f"origin/{base_ref}"] if base_ref else []) + ["origin/main", "HEAD~1"]
 
@@ -57,8 +70,12 @@ def _diff_base() -> str | None:
         merge_base = subprocess.run(
             ["git", "merge-base", "HEAD", candidate], check=False, capture_output=True, text=True
         )
-        if merge_base.returncode == 0:
-            return merge_base.stdout.strip()
+        if merge_base.returncode != 0:
+            continue
+        base = merge_base.stdout.strip()
+        if base == head:
+            continue
+        return base
     return None
 
 
