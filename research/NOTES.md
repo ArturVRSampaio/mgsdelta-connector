@@ -88,3 +88,48 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   work, the next fallback is supplying a custom AOB signature in
   `UE4SS_Signatures/GUObjectArray.lua` per UE4SS's own instructions in the
   log, which requires more hands-on binary analysis.
+
+### 2026-07-26: EngineVersionOverride 5.1–5.6 all fail to resolve GUObjectArray
+
+- **Finding**: tried `[EngineVersionOverride]` `MajorVersion=5` /
+  `MinorVersion=1` through `6` in turn (relaunching after each edit).
+  Setting the override does stop UE4SS complaining about `EngineVersion`
+  itself, but **`GUObjectArray` fails to resolve for every single one** —
+  identical `[PS] Failed to find GUObjectArray: expected at least one
+  value` on every scan attempt, every version. Confirms the version number
+  isn't the actual blocker: `GUObjectArray`'s AOB pattern is presumably
+  matched independent of the declared engine version (or at least none of
+  UE4SS's built-in patterns for 5.1–5.6 match this specific compiled
+  binary).
+- **Behavior difference from the very first (no-override) attempt**: with
+  no override, the process exited after the scan timeout. With an explicit
+  (if wrong) override set, the process kept running past the timeout
+  (`StillRunning: True` even after `Fatal Error: PS scan timed out` in the
+  log) — UE4SS still gives up on full hooking, but doesn't force-close the
+  game in this case. Not fully understood why the two paths differ; not
+  important for the viability question either way.
+- **Conclusion**: engine-version guessing is a dead end for unblocking
+  `GUObjectArray` on its own. Reset `UE4SS-settings.ini`'s
+  `EngineVersionOverride` back to blank afterward (no version was
+  confirmed correct, so leaving a guess in there would be misleading).
+- **Confidence**: high that this specific game's compiled binary needs a
+  custom, hand-built `GUObjectArray` AOB signature — not something that
+  falls out of trying more version numbers.
+- **Follow-up / open decision for whoever picks this up next**: two paths
+  forward, both real work beyond config tweaking:
+  1. **Build a custom `GUObjectArray.lua` AOB signature** for this exact
+     binary. Needs a disassembler (Ghidra/IDA), a search for a known
+     reference pattern to `GUObjectArray` (e.g. via a string/constant
+     cross-reference UE4SS's own docs describe), and testing the resulting
+     pattern the same way as above. This keeps the "standard, well-trodden"
+     UE4SS path the README always preferred.
+  2. **Switch to raw memory access (pymem)** instead of relying on UE4SS's
+     object-array discovery — we already confirmed (see the anti-cheat/
+     engine entry above) that the process allows free `OpenProcess`/module
+     enumeration, so this path is viable too, just a different kind of
+     from-scratch offset-hunting work (finding the frog-collected flag /
+     item slots directly via memory scanning tools like Cheat Engine,
+     rather than through UE4SS's object model).
+  Neither is a quick follow-up — both are their own multi-session research
+  efforts. Recommend deciding which one to invest in before writing any
+  more connector code.

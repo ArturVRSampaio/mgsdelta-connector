@@ -47,12 +47,18 @@ README for the pattern. `.venv/bin/pytest --cov` should pass as-is. See
   also succeeded cleanly (156 modules, no access-denied), meaning it isn't
   running as a protected process either. See `research/NOTES.md` for detail.
 - **Engine**: the game is Unreal Engine (5) — **confirmed** from the install
-  layout (`Engine/` folder, `MGSDelta-Win64-Shipping.exe` naming). With no
-  anti-cheat, tools like [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) (Lua
-  scripting injected into UE games) are the standard, well-trodden path for
-  this kind of integration and should be preferred over hand-rolled memory
-  scanning where possible. Still needs an actual install/injection test
-  against this specific game (next up).
+  layout (`Engine/` folder, `MGSDelta-Win64-Shipping.exe` naming).
+  [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) **does inject and hook this
+  game's core functions** (`GMalloc`, `FName`, `StaticConstructObject_Internal`
+  all resolve automatically), but its `GUObjectArray` pattern — the piece
+  it needs for almost everything past basic hooking — doesn't match this
+  build under any of engine versions 5.1–5.6 tried so far. This game isn't
+  in UE4SS's community config database yet. **Open decision, not yet made**:
+  invest in a custom `GUObjectArray` AOB signature (keeps the UE4SS path,
+  needs a disassembler and real reverse-engineering work) vs. switch to raw
+  memory access via `pymem` (the process allows free `OpenProcess`/module
+  access, confirmed above, so this path is viable too — just a different
+  offset-hunting effort). See `research/NOTES.md` for the full log.
 - **Save-game feasibility as a fallback**: now low-priority given how clean
   the anti-cheat/access results are — only revisit if UE4SS or raw memory
   access hits an unexpected wall.
@@ -107,10 +113,14 @@ reimplementing the network protocol.
 As of 2026-07-26: tooling/CI fully wired and green on GitHub (lint, types,
 tests+coverage, mutation testing, Codecov upload all confirmed working —
 see [`CONTRIBUTING.md`](./CONTRIBUTING.md)). No connector logic yet — every
-`.py` file is still a stub. **Recon (milestone 1) is in progress**: the game
-is installed, and anti-cheat + engine are confirmed (no anti-cheat, UE5 —
-see `research/NOTES.md`). Next: confirm UE4SS actually attaches/injects
-into this specific game, which decides the rest of the architecture.
+`.py` file is still a stub. **Recon (milestone 1) is mostly done**: no
+anti-cheat, UE5 confirmed, and UE4SS injects/hooks this game's core
+functions — but its `GUObjectArray` signature doesn't match this build
+under any engine version tried (5.1–5.6), so it's not fully usable yet
+without a custom AOB signature. See `research/NOTES.md` for the full log.
+**Blocked on a decision**: build a custom UE4SS signature for this game vs.
+switch to raw memory access (`pymem`) instead — both are real work, not a
+quick fix, and picking one determines the rest of this repo's architecture.
 
 ## Development
 
