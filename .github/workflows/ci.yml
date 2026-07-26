@@ -34,6 +34,9 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -e ".[dev]"
+      # Real Archipelago core, needed at runtime now that client.py imports
+      # CommonClient/NetUtils/worlds -- see conftest.py and the submodule.
+      - run: pip install -r Archipelago/requirements.txt
       - run: pytest --cov --cov-report=term-missing --cov-report=xml
       - run: python scripts/check_coverage.py
       # Non-blocking: Codecov visibility shouldn't gate CI or the mutation
@@ -61,4 +64,5 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -e ".[dev]"
+      - run: pip install -r Archipelago/requirements.txt
       - run: python scripts/run_mutation_tests.py
