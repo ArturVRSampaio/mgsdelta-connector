@@ -3,7 +3,11 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore: &non_code_paths
+      - "**.md"
+      - "LICENSE"
   pull_request:
+    paths-ignore: *non_code_paths
 
 jobs:
   lint:
@@ -44,6 +48,11 @@ jobs:
     needs: test
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so scripts/run_mutation_tests.py can diff against a
+          # base ref (PR base, origin/main, or the previous commit) and scope
+          # mutation testing to just the files that changed.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

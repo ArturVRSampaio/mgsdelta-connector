@@ -68,6 +68,21 @@ moment the first real function lands, that exemption disappears and mutation
 testing becomes a real, enforced gate — this is intentional, not a
 loophole to rely on.
 
+`mutmut` also imports Python's `resource` module, which doesn't exist on
+Windows — the mutation gate can only actually run on Linux/macOS (CI uses
+`ubuntu-latest`). On Windows, `scripts/run_mutation_tests.py` will report
+false success without ever running a mutant; don't trust a local "All
+mutants killed" on that platform.
+
+Mutating the whole `src/` tree on every run gets slow as real logic
+accumulates. `scripts/run_mutation_tests.py` scopes each run to just the
+`.py` files changed since the best available base ref (PR base ref,
+`origin/main`, or the previous commit) by temporarily rewriting
+`pyproject.toml`'s `paths_to_mutate` and restoring it afterward — mutmut
+itself has no CLI/env override for this, only a pyproject.toml key. If no
+base ref resolves at all (e.g. a single-commit shallow clone), it falls
+back to mutating everything.
+
 ## Running the checks locally
 
 ```bash
