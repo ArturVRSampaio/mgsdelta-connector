@@ -1,0 +1,16 @@
+# Codecov is used for visibility (badge, PR diff comments, trend dashboard).
+# The actual pass/fail gate is pytest --cov-fail-under=100 in CI, so these
+# checks are informational rather than a second, redundant blocking gate.
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        informational: true
+    patch:
+      default:
+        target: auto
+        informational: true
+
+comment:
+  layout: "condensed_header, diff, flags, files"

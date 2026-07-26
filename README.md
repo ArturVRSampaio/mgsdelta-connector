@@ -1,5 +1,8 @@
 # mgsdelta-connector
 
+[![CI](https://github.com/arturvrsampaio/mgsdelta-connector/actions/workflows/ci.yml/badge.svg)](https://github.com/arturvrsampaio/mgsdelta-connector/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/arturvrsampaio/mgsdelta-connector/graph/badge.svg)](https://codecov.io/gh/arturvrsampaio/mgsdelta-connector)
+
 The runtime bridge between a running copy of **Metal Gear Solid Δ: Snake Eater**
 and an Archipelago multiworld server. This is the piece that turns
 [`mgsdelta-apworld`](../mgsdelta-apworld)'s abstract items/locations into real
@@ -88,6 +91,16 @@ step is #1 (anti-cheat / engine recon). Findings should get logged in
 Clean code/architecture rules (including the ports-and-adapters split that
 keeps I/O out of the testable logic), the 100%-logic-tested policy, and how
 to run the full check suite locally are in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+### One-time setup after pushing to GitHub
+
+CI (lint/types/tests/mutation testing) works immediately with no setup. The
+Codecov badge needs one manual step first: sign in to
+[codecov.io](https://codecov.io) with GitHub, enable this repo, copy its
+upload token, then add it as a repository secret named `CODECOV_TOKEN`
+(Settings → Secrets and variables → Actions) here on GitHub. Until that's
+done, the `codecov-action` upload step in CI will fail — everything else is
+unaffected.
 
 ## Legal / scope note
 
