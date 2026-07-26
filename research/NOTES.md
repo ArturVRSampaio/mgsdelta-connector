@@ -256,3 +256,51 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   meant to ship, but worth keeping as a reference for the calling pattern
   (`FindFirstOf` + direct method call + `pcall`-wrapped) until
   `game_state.py` has a real equivalent.
+
+### 2026-07-26: Milestone 3 done — write path confirmed via a reversible property write
+
+- **Finding**: found the per-duck component via UE4SS Live View, searching
+  "Gako": `/Script/MGS3.GakoComponent`, an `ActorComponent` with a
+  `bColleted` bool property (note the game's own typo — matches
+  `IsUnlcokedInCurrentArea`'s style) and a `GakoSetCollected()` function
+  taking no parameters. The actor that owns it, `BP_Gako_C`
+  (`/Game/Blueprints/Gako/BP_Gako`), also exposes a `Gako_Life` IntProperty.
+- **First attempt** (`GakoSetCollected()` via `FindFirstOf("GakoComponent")`)
+  technically succeeded (no error) but proved nothing: the specific duck
+  instance UE4SS happened to grab already had `bColleted = true`, so the
+  call was a no-op — before/after were identical, and the aggregate counter
+  didn't move. `FindFirstOf` only returns whichever instance is first in
+  memory, not necessarily an uncollected one, and every `GakoComponent`
+  loaded in the current area may already be collected.
+- **Second attempt, the one that actually proves it**: used `Gako_Life`
+  instead — repeatable and reversible, unlike the one-shot collect flag.
+  Via `FindFirstOf("BP_Gako_C")` + `UObject:SetPropertyValue("Gako_Life",
+  value)`:
+  ```
+  Gako_Life BEFORE = 3
+  SetPropertyValue(Gako_Life, 2) ok=true err=nil
+  Gako_Life AFTER = 2
+  Gako_Life RESTORED (call ok=true) = 3
+  ```
+  Read → write → read-back confirms the new value → write the original
+  value back → read-back confirms restoration. This is a complete,
+  unambiguous round-trip proof that **writes through UE4SS actually take
+  effect**, not just that the call doesn't error.
+- **Gotcha worth flagging for next time**: a keybind (Ctrl+Num6) silently
+  did nothing on the first attempt — not even a Lua error in the log —
+  because "Num6" means the physical numpad key specifically. If Num Lock
+  reassigns it or the wrong key is pressed, UE4SS's keybind system doesn't
+  fire at all and logs nothing, which looks identical to "the script
+  crashed before its first print." When a keybind produces zero log output
+  (not even an error), suspect the keypress itself first, not the script.
+- **Confidence**: high — this is a real read-write-verify-restore round
+  trip, the strongest possible confirmation short of observing it change
+  live in the HUD.
+- **Follow-up**: milestone 4 (vertical slice) — wire a real read (duck
+  aggregate count) and a real write (something equivalent to
+  `GakoSetCollected`, ideally on a confirmed-uncollected duck reached via
+  actual play rather than whatever `FindAllOf` grabs) into `client.py`'s AP
+  session, so collecting one real duck sends a real Archipelago check and
+  receiving one real item actually grants something in-game. This is the
+  connector's proof-of-concept milestone, matched to the apworld repo's
+  milestone 3.

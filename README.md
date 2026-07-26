@@ -97,8 +97,14 @@ reimplementing the network protocol.
    `research/NOTES.md`. (Frogs/"Kerotan" share the same subsystem but their
    aggregate-count function isn't found yet — ducks are the first real
    target for that reason, see below.)
-3. **Write one effect**: find and reliably trigger one item grant — e.g. give
-   the player a ration — proving the write path works.
+3. ~~**Write one effect**: find and reliably trigger one item grant — e.g.
+   give the player a ration — proving the write path works.~~ **Done** —
+   read/wrote/read-back/restored `Gako_Life` on a live `BP_Gako_C` actor via
+   `UObject:SetPropertyValue`, a full reversible round-trip proof. See
+   `research/NOTES.md`. (The more obviously "grant an item" -shaped
+   `GakoSetCollected()` call also works, but only provably so on a duck
+   that isn't already collected — worth revisiting once milestone 4 needs
+   a real collect-style write.)
 4. **Vertical slice with the apworld**: wire steps 2+3 into `client.py`'s AP
    session — collecting one real duck sends a real check to a real
    Archipelago server; the server sending one real item back actually grants
@@ -117,14 +123,16 @@ reimplementing the network protocol.
 As of 2026-07-26: tooling/CI fully wired and green on GitHub (lint, types,
 tests+coverage, mutation testing, Codecov upload all confirmed working —
 see [`CONTRIBUTING.md`](./CONTRIBUTING.md)). No connector logic yet — every
-`.py` file is still a stub, but **milestones 1 and 2 are both done**: no
+`.py` file is still a stub, but **milestones 1, 2, and 3 are all done**: no
 anti-cheat, engine confirmed UE 5.3, UE4SS fully working (see
-`research/NOTES.md` for the exact recipe), and a real live value — the duck
-("Gako") collectible counter — successfully read through it via a Lua mod,
-confirmed matching the in-game HUD. **Scope note**: the duck collectible is
-now the first real target (not frogs) — same subsystem, but the frog
-aggregate-count function isn't found yet and ducks already work end to end.
-Next: milestone 3, write one effect (grant an item).
+`research/NOTES.md` for the exact recipe), a real live value — the duck
+("Gako") collectible counter — successfully read through it via a Lua mod
+(confirmed matching the in-game HUD), and a real write confirmed via a full
+read/write/read-back/restore round trip on a live actor's property.
+**Scope note**: the duck collectible is the first real target (not frogs)
+— same subsystem, but the frog aggregate-count function isn't found yet and
+ducks already work end to end for both read and write. Next: milestone 4,
+the vertical slice (wire both into `client.py`'s real AP session).
 
 ## Development
 
