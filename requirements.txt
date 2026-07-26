@@ -1,0 +1,4 @@
+# TODO: pin once the recon phase (README milestone 1) settles the approach.
+# Likely candidates:
+#   pymem           # raw memory read/write, if that's the chosen path
+#   websockets      # Archipelago CommonClient network transport
