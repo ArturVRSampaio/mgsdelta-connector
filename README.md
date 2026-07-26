@@ -89,13 +89,18 @@ reimplementing the network protocol.
    save-diffing based on that answer. Get the game process attachable/inspectable
    at all with the chosen tool.~~ **Done** — no anti-cheat, UE4SS confirmed
    working. See `research/NOTES.md`.
-2. **Read one flag**: find and reliably read a single stable value — e.g. player
-   HP or one frog-collected bit — proving the read path works across a game
-   session (menu, load, etc. don't break it).
+2. ~~**Read one flag**: find and reliably read a single stable value — e.g.
+   player HP or one frog-collected bit — proving the read path works across
+   a game session (menu, load, etc. don't break it).~~ **Done** — reads the
+   duck ("Gako") collectible counter live via `BP_KerotanSubsystem_C`'s
+   `GetGakoUnlockStatus()`, confirmed matching the HUD. See
+   `research/NOTES.md`. (Frogs/"Kerotan" share the same subsystem but their
+   aggregate-count function isn't found yet — ducks are the first real
+   target for that reason, see below.)
 3. **Write one effect**: find and reliably trigger one item grant — e.g. give
    the player a ration — proving the write path works.
 4. **Vertical slice with the apworld**: wire steps 2+3 into `client.py`'s AP
-   session — collecting the one real frog sends a real check to a real
+   session — collecting one real duck sends a real check to a real
    Archipelago server; the server sending one real item back actually grants
    it in-game. This is the project's proof-of-concept milestone, matched to the
    apworld repo's milestone 3.
@@ -112,14 +117,14 @@ reimplementing the network protocol.
 As of 2026-07-26: tooling/CI fully wired and green on GitHub (lint, types,
 tests+coverage, mutation testing, Codecov upload all confirmed working —
 see [`CONTRIBUTING.md`](./CONTRIBUTING.md)). No connector logic yet — every
-`.py` file is still a stub, but **recon (milestone 1) is fully done**: no
-anti-cheat, engine confirmed UE 5.3, and UE4SS is fully working against a
-real running game session (core signatures resolve, all UObject classes
-construct, member offsets dump, native hooks register, bundled Lua mods
-run) using the experimental UE4SS build + a community `GUObjectArray.lua`
-signature + `EngineVersionOverride 5.3` — see `research/NOTES.md` for the
-exact recipe. Next: milestone 2, read one real flag (e.g. a frog-collected
-bit) via UE4SS's live object/property access.
+`.py` file is still a stub, but **milestones 1 and 2 are both done**: no
+anti-cheat, engine confirmed UE 5.3, UE4SS fully working (see
+`research/NOTES.md` for the exact recipe), and a real live value — the duck
+("Gako") collectible counter — successfully read through it via a Lua mod,
+confirmed matching the in-game HUD. **Scope note**: the duck collectible is
+now the first real target (not frogs) — same subsystem, but the frog
+aggregate-count function isn't found yet and ducks already work end to end.
+Next: milestone 3, write one effect (grant an item).
 
 ## Development
 

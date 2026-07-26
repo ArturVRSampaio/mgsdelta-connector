@@ -195,3 +195,64 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   using UE4SS's live object/property access now that it's confirmed
   working. `config.py` should record this exact UE4SS build + signature +
   engine-version recipe so it's reproducible without re-deriving it.
+
+### 2026-07-26: Milestone 2 done — read a live collectible counter via a Lua mod
+
+- **Finding**: the game HUD shows two persistent collectible counters —
+  a frog icon ("Kerotan") and a duck icon ("Gako"), each `N/64`. Found the
+  backing object via UE4SS's Live View, searching "Kerotan": a native class
+  `/Script/MGS3.KerotanSubsystem`, and a Blueprint subclass
+  `BP_KerotanSubsystem_C` with a **live instance** parented under the
+  `GameInstance` (`BP_CobraGameInstance_C`) — i.e. a `GameInstanceSubsystem`,
+  persistent across levels/checkpoints. It exposes (at least) three
+  functions: `GetGakoUnlockStatus()`, `GetKerotanUnlockStatus()`,
+  `GetCurrentMapKerotanStatus()`.
+- UE4SS's GUI "call a function" dialog (Live View → select object → Find
+  functions) turned out to be a dead end for this — searching for any term
+  (`gako`, `get`, ...) returned an empty list every time, on this
+  experimental build at least. Don't rely on it.
+- Instead, wrote a throwaway Lua mod
+  (`Mods/FrogFlagReaderMod/Scripts/main.lua`, enabled via `mods.txt`) that
+  calls `FindFirstOf("BP_KerotanSubsystem_C")` and invokes all three
+  functions directly, printing results to `UE4SS.log`, bound to a keybind
+  (Ctrl+Num9) plus an auto-run 5s after mod load. **This worked
+  immediately**:
+  ```
+  GetGakoUnlockStatus -> UnlockCount=34 TotalCount=64 IsExistInCurrentArea=true IsUnlcokedInCurrentArea=true
+  ```
+  34/64 matched the live HUD's duck counter exactly at the time of the call
+  — confirmed by directly comparing against a screenshot taken in the same
+  session. This is a real, verified, reproducible read of live game state
+  through UE4SS.
+- `GetKerotanUnlockStatus()` and `GetCurrentMapKerotanStatus()` both
+  returned struct wrappers with every field `nil` when called with no
+  arguments. Working theory: these two return a *per-instance*
+  `KerotanStatus` struct (`position`, `Rotation`, `bIsUnlocked`,
+  `bHasKerotan` — see the earlier Kerotan search dump), scoped to a specific
+  frog/map context that wasn't established by an argument-less call, unlike
+  `GetGakoUnlockStatus`'s `KerotanGakoUnlockStatus` struct
+  (`UnlockCount`/`TotalCount`), which appears to be a simple aggregate with
+  no required context. The actual frog (Kerotan) aggregate count likely
+  needs a different function we haven't found yet, or requires
+  summing/iterating individual `KerotanStatus` entries rather than one
+  direct aggregate getter.
+- **Scope decision**: since frogs and ducks are structurally the same kind
+  of collectible (same subsystem, same `N/64` shape, both present on
+  "almost every map" per user), and the duck counter is already proven
+  working end-to-end while the frog-specific aggregate isn't, **the duck
+  (Gako) collectible is the first real target going forward** instead of
+  continuing to chase the frog-specific function signature. The apworld
+  side's location-pool plan may need a small adjustment to reflect this —
+  ducks first, frogs later once/if the right function turns up.
+- **Confidence**: high — this is a real, working, scripted read path, not a
+  one-off manual poke. `GetGakoUnlockStatus()` on the live
+  `BP_KerotanSubsystem_C` instance is the confirmed milestone-2 read.
+- **Follow-up**: milestone 3 (write one effect) — find a corresponding
+  "unlock/set duck" call or property write on the same subsystem, to prove
+  the write path symmetrically. The probe script is checked into this repo
+  at `research/probes/FrogFlagReaderMod/main.lua` (copy it to
+  `<game>/Binaries/Win64/Mods/FrogFlagReaderMod/Scripts/main.lua` and enable
+  it in that folder's `mods.txt` to reuse) — it's a throwaway probe, not
+  meant to ship, but worth keeping as a reference for the calling pattern
+  (`FindFirstOf` + direct method call + `pcall`-wrapped) until
+  `game_state.py` has a real equivalent.
