@@ -7,7 +7,9 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
 
 - [x] Does MGS Δ ship with Easy Anti-Cheat or another anti-cheat? — **No.**
 - [x] Engine confirmation (assumed UE5 — verify build/version). — **Confirmed UE5.**
-- [ ] Is UE4SS viable for this game specifically?
+- [x] Is UE4SS viable for this game specifically? — **Yes, injection works; needs
+      a manual engine-version/signature config (not yet in UE4SS's known-games
+      list). See log below.**
 - [ ] Are save files readable/diffable as a fallback path?
 
 ## Log
@@ -46,3 +48,43 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   confirmation its console/log opens and mods load. Save-file fallback
   question is now low-priority given how clean this result is; only revisit
   if UE4SS/memory access hits an unexpected wall.
+
+### 2026-07-26: UE4SS v3.0.1 injects successfully; needs a manual engine-version override
+
+- **Finding**: dropped UE4SS v3.0.1 (`dwmapi.dll` + `UE4SS.dll` +
+  `UE4SS-settings.ini` + `Mods/`) directly into
+  `MGSDelta\Binaries\Win64\` (same folder as the shipping exe) and launched
+  via Steam. **Injection succeeded**: the shipping exe's window title
+  changed to "UE4SS Debugging Tools (OpenGL 3)", `UE4SS.log` was created,
+  and its pattern scanner found several core signatures automatically:
+  `GMalloc`, `FName::ToString`, `FName::FName(wchar_t*)`,
+  `StaticConstructObject_Internal`. This proves UE4SS's injection/hooking
+  approach works against this exact binary — it isn't blocked structurally.
+- **What failed**: two signatures did *not* auto-resolve — `EngineVersion`
+  (the string UE4SS reads to identify the exact engine build) and
+  `GUObjectArray` (the core object-table pointer UE4SS needs for almost
+  everything past basic hooking). UE4SS retried the scan 52 times over
+  ~30s, then aborted with `Fatal Error: PS scan timed out` and the game
+  process exited cleanly (no crash dump, no Windows Error Reporting entry
+  — this looks like a deliberate abort by UE4SS, not an engine crash).
+- **Why**: this game isn't in UE4SS's community `zCustomGameConfigs.zip`
+  database (checked all entries — no MGS/Snake Eater/Metal Gear/Delta
+  match), so there's no pre-supplied `EngineVersionOverride` or custom
+  `GUObjectArray.lua` AOB for it yet. `UE4SS-settings.ini` has an
+  `[EngineVersionOverride]` section with blank `MajorVersion`/`MinorVersion`
+  — these need to be filled in with this game's actual UE5 minor version.
+  Tried extracting the version from strings in the shipping exe
+  (`grep -a -o "5\.[0-9]\.[0-9]"`) — found scattered `5.5.x`/`5.6.x`-looking
+  strings, each appearing exactly once, which reads as incidental data
+  (asset/plugin version numbers) rather than a confirmed engine version, so
+  don't trust that without corroboration.
+- **Confidence**: high that UE4SS is viable in principle (the hard part —
+  injection + core hooks — already works). Medium that it just needs the
+  right `EngineVersionOverride` value — that specific number is still
+  unconfirmed.
+- **Follow-up**: try `EngineVersionOverride` with a few plausible UE5 minor
+  versions (5.1 through 5.5 are all plausible for a 2025-era UE5 title) and
+  re-launch after each, watching whether `GUObjectArray` resolves. If none
+  work, the next fallback is supplying a custom AOB signature in
+  `UE4SS_Signatures/GUObjectArray.lua` per UE4SS's own instructions in the
+  log, which requires more hands-on binary analysis.
