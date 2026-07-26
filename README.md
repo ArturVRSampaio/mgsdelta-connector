@@ -98,6 +98,24 @@ to run the full check suite locally are in [`CONTRIBUTING.md`](./CONTRIBUTING.md
 CI and Codecov are already fully configured and working — no setup needed
 before starting recon work.
 
+## Readiness checklist (once the connector is functional)
+
+Not relevant yet — revisit once the vertical-slice milestone above is done.
+Unlike the apworld, the client isn't submitted/merged into Archipelago's
+core repo — clients are distributed as their own repo/executable, same
+pattern as every other PC-game AP client. Before calling it done, it needs
+to actually satisfy the client hard requirements: secure and insecure
+websocket handling, auto-reconnect, port-change support on saved connection
+info, status updates on goal completion, location-check detection/reporting,
+on-demand item receipt (including duplicate items), and a received-items
+index for resync after reconnect. Subclassing `CommonClient` (per the
+planned architecture above) covers most of this for free.
+
+If MGS Δ ends up with a world merged into Archipelago's core repo, note
+that the ongoing **world maintainer** obligations (Discord presence, PR
+review, testing against `main`) land on whoever maintains
+`mgsdelta-apworld`, not on this repo.
+
 ## Legal / scope note
 
 This connector is for personal, offline, single-player randomizer use only —
