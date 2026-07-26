@@ -30,14 +30,15 @@ python3 -m venv .venv
 
 `requirements.txt` is still a placeholder (see below) — every module is a
 stub, so there's nothing runtime-installable yet beyond the dev tooling.
-Once recon picks an approach (`pymem`, UE4SS, or save-diffing) and
-`client.py` starts subclassing Archipelago's `CommonClient`, this section
-will grow real runtime dependencies, likely including a pinned Archipelago
-core checkout the same way `mgsdelta-apworld` vendors one — see that repo's
-README for the pattern. `.venv/bin/pytest --cov` should pass as-is. See
-[`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full check suite.
+Recon confirmed the approach is UE4SS (see below); once `memory.py` starts
+bridging to it and `client.py` starts subclassing Archipelago's
+`CommonClient`, this section will grow real runtime dependencies, likely
+including a pinned Archipelago core checkout the same way `mgsdelta-apworld`
+vendors one — see that repo's README for the pattern. `.venv/bin/pytest --cov`
+should pass as-is. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full
+check suite.
 
-## Open questions to resolve before committing to an architecture
+## Recon findings (architecture now committed)
 
 - **Anti-cheat**: does MGS Δ ship with Easy Anti-Cheat or similar? **Resolved
   2026-07-26: no.** Confirmed both by inspecting the install tree (no
@@ -63,14 +64,14 @@ README for the pattern. `.venv/bin/pytest --cov` should pass as-is. See
   isolate all raw offsets behind a small, versioned mapping file, not scatter
   them through the code.
 
-## Planned architecture (default path, pending the answers above)
+## Planned architecture (confirmed by recon above)
 
 ```
 mgsdelta_connector/
   client.py        # subclasses Archipelago's CommonClient (network layer:
                     #   talks to the AP server, session/auth, item receive queue)
-  memory.py         # process attach + read/write primitives (pymem or UE4SS
-                    #   bridge, depending on the anti-cheat finding above)
+  memory.py         # bridge to UE4SS (confirmed working — see recon above)
+                    #   for live object/property access, not raw pymem offsets
   game_state.py      # maps raw memory reads -> semantic game events
                      #   (frog N collected, boss N defeated, item slot changed)
   item_effects.py     # maps an incoming AP item -> the memory write / game
@@ -84,9 +85,10 @@ reimplementing the network protocol.
 
 ## Build plan / milestones
 
-1. **Recon**: confirm anti-cheat status; pick UE4SS vs. raw memory vs.
+1. ~~**Recon**: confirm anti-cheat status; pick UE4SS vs. raw memory vs.
    save-diffing based on that answer. Get the game process attachable/inspectable
-   at all with the chosen tool.
+   at all with the chosen tool.~~ **Done** — no anti-cheat, UE4SS confirmed
+   working. See `research/NOTES.md`.
 2. **Read one flag**: find and reliably read a single stable value — e.g. player
    HP or one frog-collected bit — proving the read path works across a game
    session (menu, load, etc. don't break it).
@@ -126,7 +128,7 @@ keeps I/O out of the testable logic), the 100%-logic-tested policy, and how
 to run the full check suite locally are in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 CI and Codecov are already fully configured and working — no setup needed
-before starting recon work.
+before starting milestone 2 work.
 
 ## Readiness checklist (once the connector is functional)
 

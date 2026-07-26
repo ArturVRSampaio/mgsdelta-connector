@@ -26,7 +26,7 @@ and push everything else into pure, 100%-tested logic.
 
 | Module | Responsibility | Testability |
 |---|---|---|
-| `memory.py` | Raw process attach + read/write (or the UE4SS bridge, depending on what recon lands on) | **The only place raw I/O calls are allowed to live.** Kept to thin wrappers around a typed interface (e.g. a `MemoryReader`/`MemoryWriter` `Protocol`) — no decision logic. |
+| `memory.py` | The UE4SS bridge (confirmed by recon — see README) | **The only place raw I/O calls are allowed to live.** Kept to thin wrappers around a typed interface (e.g. a `MemoryReader`/`MemoryWriter` `Protocol`) — no decision logic. |
 | `client.py` | Network session with the AP server (subclasses `CommonClient`) | Same rule — network calls only, no game-logic decisions. |
 | `game_state.py` | Maps raw reads → semantic events (frog N collected, boss N defeated) | **Pure logic. Must be 100% unit tested** against a fake `MemoryReader`, never a real process. |
 | `item_effects.py` | Maps an incoming AP item → the write/call that grants it | **Pure logic. Must be 100% unit tested** against a fake `MemoryWriter`, never a real process. |

@@ -6,7 +6,7 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
 ## Open questions (see repo README)
 
 - [x] Does MGS Δ ship with Easy Anti-Cheat or another anti-cheat? — **No.**
-- [x] Engine confirmation (assumed UE5 — verify build/version). — **Confirmed UE5.**
+- [x] Engine confirmation (assumed UE5 — verify build/version). — **Confirmed UE 5.3.**
 - [x] Is UE4SS viable for this game specifically? — **Yes, fully working.**
       Uses the experimental dev build + a community `GUObjectArray.lua`
       signature + `EngineVersionOverride 5.3`. Full recipe below.
