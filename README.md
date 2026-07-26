@@ -39,19 +39,23 @@ README for the pattern. `.venv/bin/pytest --cov` should pass as-is. See
 
 ## Open questions to resolve before committing to an architecture
 
-- **Anti-cheat**: does MGS Δ ship with Easy Anti-Cheat or similar? It's a
-  single-player game so there's real hope it doesn't, but this must be confirmed
-  before writing a single memory-poking line of code — an AC hook can brick the
-  approach entirely or require a very different, much slower technique (e.g.
-  save-file-diffing instead of live memory access).
-- **Engine**: the game is Unreal Engine (5). If there's no anti-cheat, tools like
-  [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) (Lua scripting injected into UE
-  games) are the standard, well-trodden path for this kind of integration and
-  should be preferred over hand-rolled memory scanning where possible.
-- **Save-game feasibility as a fallback**: if live memory access is blocked,
-  check whether save files are human-readable/diffable enough to build a
-  "polling the save file" connector instead (slower, less real-time, but far
-  more robust to patches and immune to anti-cheat concerns).
+- **Anti-cheat**: does MGS Δ ship with Easy Anti-Cheat or similar? **Resolved
+  2026-07-26: no.** Confirmed both by inspecting the install tree (no
+  EasyAntiCheat/BattlEye files anywhere) and by launching the game live and
+  checking the process list — only the launcher stub and the shipping exe
+  run, no AC process spawns. Module enumeration against the live process
+  also succeeded cleanly (156 modules, no access-denied), meaning it isn't
+  running as a protected process either. See `research/NOTES.md` for detail.
+- **Engine**: the game is Unreal Engine (5) — **confirmed** from the install
+  layout (`Engine/` folder, `MGSDelta-Win64-Shipping.exe` naming). With no
+  anti-cheat, tools like [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) (Lua
+  scripting injected into UE games) are the standard, well-trodden path for
+  this kind of integration and should be preferred over hand-rolled memory
+  scanning where possible. Still needs an actual install/injection test
+  against this specific game (next up).
+- **Save-game feasibility as a fallback**: now low-priority given how clean
+  the anti-cheat/access results are — only revisit if UE4SS or raw memory
+  access hits an unexpected wall.
 - **Patch churn**: every game update can move memory offsets. The design should
   isolate all raw offsets behind a small, versioned mapping file, not scatter
   them through the code.
@@ -103,10 +107,10 @@ reimplementing the network protocol.
 As of 2026-07-26: tooling/CI fully wired and green on GitHub (lint, types,
 tests+coverage, mutation testing, Codecov upload all confirmed working —
 see [`CONTRIBUTING.md`](./CONTRIBUTING.md)). No connector logic yet — every
-`.py` file is still a stub. **Recon (milestone 1 below) hasn't started: it
-was blocked on not having a PC with the game installed.** See
-`research/NOTES.md` for the exact checklist to pick up from — nothing in
-that log has been investigated yet, so start at the top.
+`.py` file is still a stub. **Recon (milestone 1) is in progress**: the game
+is installed, and anti-cheat + engine are confirmed (no anti-cheat, UE5 —
+see `research/NOTES.md`). Next: confirm UE4SS actually attaches/injects
+into this specific game, which decides the rest of the architecture.
 
 ## Development
 
