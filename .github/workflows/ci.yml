@@ -29,6 +29,7 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev]"
       - run: pytest --cov --cov-report=term-missing --cov-report=xml
+      - run: python scripts/check_coverage.py
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

@@ -43,7 +43,11 @@ pythonpath = ["src"]
 source = ["src"]
 
 [tool.coverage.report]
-fail_under = 100
+# fail_under is deliberately NOT set here: pytest-cov's own fail-under check
+# is flaky when total statements == 0 (nedbat/coveragepy#1470,
+# pytest-dev/pytest-cov#641) — identical zero-logic input has been observed
+# to report both 100% and 0%. scripts/check_coverage.py enforces the 100%
+# gate deterministically instead, from coverage's own JSON totals.
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
