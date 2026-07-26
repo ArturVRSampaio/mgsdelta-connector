@@ -78,8 +78,16 @@ reimplementing the network protocol.
 
 ## Status
 
-Not started — directory scaffold only. Next concrete step is #1 (anti-cheat /
-engine recon). Findings should get logged in `research/NOTES.md` as they come in.
+Tooling/CI scaffold done (lint, types, tests+coverage, mutation testing — see
+[`CONTRIBUTING.md`](./CONTRIBUTING.md)). No connector logic yet. Next concrete
+step is #1 (anti-cheat / engine recon). Findings should get logged in
+`research/NOTES.md` as they come in.
+
+## Development
+
+Clean code/architecture rules (including the ports-and-adapters split that
+keeps I/O out of the testable logic), the 100%-logic-tested policy, and how
+to run the full check suite locally are in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ## Legal / scope note
 

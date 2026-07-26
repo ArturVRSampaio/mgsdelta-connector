@@ -8,6 +8,6 @@ TODO: populate once recon (research/NOTES.md) has confirmed real offsets.
 Keyed by game version/build so multiple patches can be supported at once.
 """
 
-OFFSETS = {
+OFFSETS: dict[str, dict[str, int]] = {
     # "1.0.0": {...},
 }

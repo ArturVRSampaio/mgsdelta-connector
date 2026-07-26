@@ -3,3 +3,12 @@ __pycache__/
 .venv/
 *.egg-info/
 .DS_Store
+
+# tool caches / build artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+mutants/
+.mutmut-cache
