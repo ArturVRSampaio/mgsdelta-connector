@@ -304,3 +304,34 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   receiving one real item actually grants something in-game. This is the
   connector's proof-of-concept milestone, matched to the apworld repo's
   milestone 3.
+
+### 2026-07-26: IPC feasibility confirmed — plain Lua file I/O works
+
+- **Why this matters**: `client.py` (talks to the real Archipelago server)
+  has to run as an external Python process — UE4SS's Lua environment has
+  no Archipelago/websocket client of its own, and embedding Python inside
+  the game process isn't a real option. So there's an unavoidable IPC
+  boundary between "the Lua code that can actually read/write game state"
+  and "the Python code that talks to AP." This was an open question the
+  planned architecture didn't actually answer yet.
+- **Finding**: standard Lua `io.open(path, "w")` / `file:write` / `file:close`
+  works fine from a UE4SS mod script, no sandboxing blocks it. Checked via
+  the probe mod: created a file, wrote a line, confirmed both the UE4SS log
+  and the file on disk. No sockets, no HTTP, nothing exotic needed.
+- **Implication — the bridge is file-polling**: `memory.py` (Python side)
+  and the in-game Lua script can communicate via plain files on disk, e.g.
+  a `state.json` the Lua side writes on a timer (duck counts, whatever
+  `game_state.py` needs) that Python polls and diffs to detect new checks,
+  and a `commands.json` (or similar) that Python writes and the Lua side
+  polls to know what to grant/write, clearing or acking it once done. No
+  new dependencies on either side — this is about as simple as an
+  IPC mechanism gets.
+- **Confidence**: high that this is viable as *a* bridge. Not yet decided:
+  exact file format, polling interval, location (relative to the game's
+  `Binaries/Win64` dir presumably, since that's the Lua script's working
+  directory), or how to handle the Lua side missing a write while the game
+  is closed (a queued-commands file surviving restarts, matching README's
+  existing plan for "resyncing already-received items after a relaunch").
+- **Follow-up**: this unblocks actually writing `memory.py` and the
+  corresponding in-game Lua script for milestone 4, instead of leaving the
+  connector's core architecture question unanswered.

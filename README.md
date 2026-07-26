@@ -70,8 +70,11 @@ check suite.
 mgsdelta_connector/
   client.py        # subclasses Archipelago's CommonClient (network layer:
                     #   talks to the AP server, session/auth, item receive queue)
-  memory.py         # bridge to UE4SS (confirmed working — see recon above)
-                    #   for live object/property access, not raw pymem offsets
+  memory.py         # bridge to UE4SS via file polling (confirmed viable --
+                    #   plain io.open/write works fine from UE4SS Lua, no
+                    #   sockets/HTTP available or needed): a state file the
+                    #   in-game Lua script writes on a timer, and a commands
+                    #   file this process writes for the Lua side to poll
   game_state.py      # maps raw memory reads -> semantic game events
                      #   (frog N collected, boss N defeated, item slot changed)
   item_effects.py     # maps an incoming AP item -> the memory write / game
