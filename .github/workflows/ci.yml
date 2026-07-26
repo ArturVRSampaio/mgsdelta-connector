@@ -27,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -49,6 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          submodules: true
           # Full history so scripts/run_mutation_tests.py can diff against a
           # base ref (PR base, origin/main, or the previous commit) and scope
           # mutation testing to just the files that changed.

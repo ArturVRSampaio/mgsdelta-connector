@@ -26,6 +26,9 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Archipelago is a vendored submodule (real core, needed for eventual
+# CommonClient subclassing) -- not our code, don't lint/format it.
+extend-exclude = ["Archipelago"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "C90"]

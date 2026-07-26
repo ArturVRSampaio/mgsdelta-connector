@@ -21,22 +21,24 @@ a reverse-engineering standing start, not from a plugin SDK.
 ## Install
 
 ```bash
-git clone https://github.com/ArturVRSampaio/mgsdelta-connector.git
+git clone --recurse-submodules https://github.com/ArturVRSampaio/mgsdelta-connector.git
 cd mgsdelta-connector
+# if you cloned without --recurse-submodules:
+#   git submodule update --init
 
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 ```
 
-`requirements.txt` is still a placeholder (see below) — every module is a
-stub, so there's nothing runtime-installable yet beyond the dev tooling.
-Recon confirmed the approach is UE4SS (see below); once `memory.py` starts
-bridging to it and `client.py` starts subclassing Archipelago's
-`CommonClient`, this section will grow real runtime dependencies, likely
-including a pinned Archipelago core checkout the same way `mgsdelta-apworld`
-vendors one — see that repo's README for the pattern. `.venv/bin/pytest --cov`
-should pass as-is. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full
-check suite.
+Archipelago core is vendored as a pinned submodule (`Archipelago/`, same
+pattern as `mgsdelta-apworld`) for the eventual `CommonClient` subclass in
+`client.py` — nothing currently imports from it yet, so it isn't needed to
+run the test suite today, just cloned for when it is.
+`requirements.txt` is still mostly a placeholder — `memory.py`,
+`game_state.py`, and `item_effects.py` are real now (file-based bridge +
+duck-counter read/write logic), but `client.py`'s real AP server session
+is still a stub. `.venv/bin/pytest --cov` should pass as-is. See
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full check suite.
 
 ## Recon findings (architecture now committed)
 
@@ -123,19 +125,20 @@ reimplementing the network protocol.
 
 ## Status
 
-As of 2026-07-26: tooling/CI fully wired and green on GitHub (lint, types,
-tests+coverage, mutation testing, Codecov upload all confirmed working —
-see [`CONTRIBUTING.md`](./CONTRIBUTING.md)). No connector logic yet — every
-`.py` file is still a stub, but **milestones 1, 2, and 3 are all done**: no
-anti-cheat, engine confirmed UE 5.3, UE4SS fully working (see
-`research/NOTES.md` for the exact recipe), a real live value — the duck
-("Gako") collectible counter — successfully read through it via a Lua mod
-(confirmed matching the in-game HUD), and a real write confirmed via a full
+As of 2026-07-26: **milestones 1, 2, and 3 are all done**: no anti-cheat,
+engine confirmed UE 5.3, UE4SS fully working (see `research/NOTES.md` for
+the exact recipe), a real live value — the duck ("Gako") collectible
+counter — successfully read through it via a Lua mod (confirmed matching
+the in-game HUD), and a real write confirmed via a full
 read/write/read-back/restore round trip on a live actor's property.
-**Scope note**: the duck collectible is the first real target (not frogs)
-— same subsystem, but the frog aggregate-count function isn't found yet and
-ducks already work end to end for both read and write. Next: milestone 4,
-the vertical slice (wire both into `client.py`'s real AP session).
+`memory.py` (file-based bridge), `game_state.py` (duck-counter read logic),
+and `item_effects.py` (duck-unlock write logic) are real now, each 100%
+tested. `client.py` is still a stub — it needs a real `CommonClient`
+subclass, which is a substantially bigger task on its own (async websocket
+session, server auth, reconnection) and is milestone 4's actual remaining
+work. **Scope note**: the duck collectible is the first real target (not
+frogs) — same subsystem, but the frog aggregate-count function isn't found
+yet and ducks already work end to end for both read and write.
 
 ## Development
 
@@ -144,7 +147,7 @@ keeps I/O out of the testable logic), the 100%-logic-tested policy, and how
 to run the full check suite locally are in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 CI and Codecov are already fully configured and working — no setup needed
-before starting milestone 2 work.
+before starting milestone 4 work.
 
 ## Readiness checklist (once the connector is functional)
 
