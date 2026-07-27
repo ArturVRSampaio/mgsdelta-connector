@@ -109,28 +109,36 @@ reimplementing the network protocol.
    `GakoSetCollected()` call also works, but only provably so on a duck
    that isn't already collected — worth revisiting once milestone 4 needs
    a real collect-style write.)
-4. **Vertical slice with the apworld** (in progress): wire steps 2+3 into
-   `client.py`'s AP session — collecting one real duck sends a real check to a
-   real Archipelago server; the server sending one real item back actually
-   grants it in-game. `memory.py`/`game_state.py`/`item_effects.py` are real
-   now, and `client.py`'s `MGSDeltaContext` (a real `CommonContext` subclass —
-   session/auth/poll loop) is implemented and 100% tested. The real, always-
-   running Lua bridge (`Mods/MGSDeltaBridgeMod`, install steps below) is
-   written and **confirmed live**: it autonomously writes the duck-count
-   `state.json` on a timer, and — the harder half — remotely unlocks an
-   uncollected duck purely from a `commands.json` entry, with **no player
-   input**, confirmed by reading the duck's `bColleted` flag flip from
-   `false` to `true` on its own (see `research/NOTES.md` for the full
-   debugging story, including two real UE4SS gotchas: hook callbacks need
-   `self:get()` to unwrap before use, and `FindAllOf` is scoped to whatever
-   level is currently streamed in). `mgsdelta-apworld` now has real duck
-   locations too (its build plan #4 — 64 "Gako Duck N" locations plus a real
-   "Unlock Duck" item), and `game_state.py`'s `LOCATION_BASE_ID` points at
-   them for real, no longer reusing the frog-ID placeholder. What's left: an
-   actual live run against a real generated seed + local AP server —
-   `client.py` has never yet been exercised against this bridge mod's real
-   state/commands files. This is the project's proof-of-concept milestone,
-   matched to the apworld repo's milestone 3.
+4. **Vertical slice with the apworld** (core proven, one known gap): wire
+   steps 2+3 into `client.py`'s AP session — collecting one real duck sends
+   a real check to a real Archipelago server; the server sending one real
+   item back actually grants it in-game. `memory.py`/`game_state.py`/
+   `item_effects.py`/`client.py` are all real and 100% tested.
+   `mgsdelta-apworld` has real duck locations too (its build plan #4 — 64
+   "Gako Duck N" locations plus a real "Unlock Duck" item), and
+   `game_state.py`'s `LOCATION_BASE_ID` points at them for real. A real
+   generated seed was hosted with a real local Archipelago server, and the
+   real `MGSDeltaContext` connected to it successfully against the actual
+   running game. The write path is **confirmed live end to end and
+   unattended**: the bridge mod (`Mods/MGSDeltaBridgeMod`) remotely unlocks
+   an uncollected duck purely from a `commands.json` entry, with no player
+   input, confirmed by reading `bColleted` flip from `false` to `true` on
+   its own. The read path was independently confirmed live matching the
+   in-game HUD back in milestone 2. **Known, accepted gap**: the game's
+   duck-unlock aggregate counter is permanent/profile-wide, not per-save —
+   it can't be reset by a new campaign or fooled by forcing a single duck's
+   `bColleted` back to `false`, so watching it increment live, during an
+   active client session, from a genuinely never-before-collected duck
+   hasn't been directly observed on this heavily-tested save. The
+   check-detection logic that consumes it (`newly_unlocked_count`,
+   `locations_to_check`) is pure, 100%-unit-tested logic against fake data,
+   so this gap is about live re-confirmation of an already-tested,
+   already-independently-confirmed-readable value, not an unverified code
+   path. See `research/NOTES.md` for the full story (including two real
+   UE4SS gotchas: hook callbacks need `self:get()` to unwrap before use,
+   and `FindAllOf` is scoped to whatever level is currently streamed in).
+   This is the project's proof-of-concept milestone, matched to the
+   apworld repo's milestone 3.
 5. **Expand the memory map**: grow `game_state.py`/`item_effects.py` to cover
    the full item/location set as the apworld repo's tables grow — one
    location/item is added to the apworld only once it's confirmed working here.
@@ -141,30 +149,36 @@ reimplementing the network protocol.
 
 ## Status
 
-As of 2026-07-26: **milestones 1, 2, and 3 are all done**, and **milestone
-4's core mechanism is now confirmed live end to end**: no anti-cheat, engine
-confirmed UE 5.3, UE4SS fully working (see `research/NOTES.md` for the exact
-recipe), a real live value — the duck ("Gako") collectible counter —
-successfully read through it via a Lua mod (confirmed matching the in-game
-HUD), and a real write confirmed via a full read/write/read-back/restore
-round trip on a live actor's property. `memory.py` (file-based bridge),
-`game_state.py` (duck-counter read logic + location-ID mapping),
-`item_effects.py` (duck-unlock write logic + received-item tracking), and
-`client.py` (a real `MGSDeltaContext` `CommonContext` subclass —
-session/auth/poll loop) are all real and 100% tested now (Archipelago
-vendored as a submodule for the `CommonContext` import). The real, always-
-running Lua bridge mod (`Mods/MGSDeltaBridgeMod`) is written and **confirmed
-live**: it autonomously writes `state.json` on a timer, and remotely
-unlocked an uncollected duck purely from a `commands.json` entry with no
-player input — confirmed by observing the duck's `bColleted` flag flip on
-its own. See `research/NOTES.md` for the full debugging story.
-`mgsdelta-apworld` now has matching real duck locations too (its build
-plan #4). What's not done yet: a real live run against a generated seed +
-local AP server (`client.py` hasn't yet been exercised against this bridge
-mod's real files). **Scope note**: the
-duck collectible is the first real target (not frogs) — same subsystem, but
-the frog aggregate-count function isn't found yet and ducks already work
-end to end for both read and write.
+As of 2026-07-27: **milestones 1, 2, and 3 are all done**, and **milestone
+4's core mechanism is confirmed live end to end, with one documented gap**:
+no anti-cheat, engine confirmed UE 5.3, UE4SS fully working (see
+`research/NOTES.md` for the exact recipe), a real live value — the duck
+("Gako") collectible counter — successfully read through it via a Lua mod
+(confirmed matching the in-game HUD), and a real write confirmed via a full
+read/write/read-back/restore round trip on a live actor's property.
+`memory.py` (file-based bridge), `game_state.py` (duck-counter read logic +
+location-ID mapping), `item_effects.py` (duck-unlock write logic +
+received-item tracking), and `client.py` (a real `MGSDeltaContext`
+`CommonContext` subclass — session/auth/poll loop) are all real and 100%
+tested now (Archipelago vendored as a submodule for the `CommonContext`
+import). The real, always-running Lua bridge mod (`Mods/MGSDeltaBridgeMod`)
+is written and **confirmed live**: it autonomously writes `state.json` on a
+timer, and remotely unlocked an uncollected duck purely from a
+`commands.json` entry with no player input — confirmed by observing the
+duck's `bColleted` flag flip on its own. `mgsdelta-apworld` has matching
+real duck locations too (its build plan #4). A real generated seed was
+hosted with a real local Archipelago server and `client.py`'s real context
+connected to it successfully, driving the actual running game via this
+bridge mod's real files. **Known gap**: the game's duck-unlock aggregate
+counter turned out to be permanent/profile-wide, not per-save, so watching
+it increment live from a genuinely never-collected duck during an active
+session hasn't been directly observed — the logic that consumes it is
+separately 100%-unit-tested, and the read itself was independently
+confirmed live matching the HUD, so this is a live-reconfirmation gap, not
+an unverified code path. See `research/NOTES.md` for the full story.
+**Scope note**: the duck collectible is the first real target (not frogs)
+— same subsystem, but the frog aggregate-count function isn't found yet
+and ducks already work end to end for both read and write.
 
 ### Installing the bridge mod
 

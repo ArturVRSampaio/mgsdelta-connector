@@ -464,3 +464,45 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   bridge mod. That full loop (real server → real `client.py` → real
   commands file → real bridge mod → real game state) is the remaining
   proof before calling milestone 4 fully done.
+
+### 2026-07-27: Real generated seed + local server + real client, live — and a hard limit found in the aggregate counter
+
+- **Setup**: generated a real seed with `Generate.py` against a player YAML
+  for `MGSDeltaWorld` (2 item types, 128 locations registered — confirmed
+  matching build plan #4's counts), hosted it with `MultiServer.py` on
+  `127.0.0.1`, and ran a small standalone script constructing the real
+  `MGSDeltaContext` (`server_auth`, `poll_forever`) pointed at the actual
+  running game's `mgsdelta_state.json`/`mgsdelta_commands.json`. The client
+  connected successfully — server log: `ArturSolo ... playing Metal Gear
+  Solid Delta: Snake Eater has joined`. This is the first time `client.py`
+  has run against a real server and a real running game simultaneously,
+  not just unit tests.
+- **Hit a real, structural limit trying to test the check-detection
+  (aggregate counter) path live**: `duck_unlock_count` (from
+  `GetGakoUnlockStatus()`) is permanent/profile-wide, not per-save — a
+  fresh in-game campaign did not reset it, and forcing a single duck's
+  `bColleted` back to `false` via `SetPropertyValue` and re-triggering
+  `GakoSetCollected()` on it (the same trick that worked for the milestone-4
+  write proof) does **not** move the aggregate counter either — it's backed
+  by separate persistent bookkeeping that a per-instance property write
+  doesn't touch. After several rounds of chasing this by asking for "a
+  fresh duck," it became clear this specific live increment can't be
+  reliably reproduced on this heavily-tested save without real, extended,
+  never-before-touched gameplay — chasing it further wasn't worth more
+  live-game requests for something already covered another way (see below).
+- **What's actually proven vs. what isn't**: the write path (remote
+  unlock via a forced-uncollected duck) is fully proven live and
+  unattended (previous entry). The read path was independently confirmed
+  live matching the in-game HUD back in milestone 2. The check-detection
+  and grant-selection logic (`newly_unlocked_count`, `locations_to_check`,
+  `items_to_grant`) are pure functions, 100% unit-tested against fake data
+  — they don't need a real duck to be correct, only to be exercised, and
+  the underlying `GetGakoUnlockStatus()` read they consume is independently
+  confirmed live. What's genuinely NOT verified: watching
+  `duck_unlock_count` increment *during an active client session* end to
+  end from a real, never-before-collected duck. That's an accepted,
+  documented gap, not a blocker — it needs a save/area truly untouched by
+  all this testing, which isn't something to keep asking for on demand.
+- **Confidence**: high on every piece that's actually testable (unit tests
+  + two independent live confirmations, read and write). Explicitly not
+  claiming the untested slice as proven.
