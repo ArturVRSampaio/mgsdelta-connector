@@ -42,13 +42,12 @@ def newly_unlocked_count(previous: DuckCounts | None, current: DuckCounts) -> in
     return max(0, current.unlocked - previous.unlocked)
 
 
-# Location IDs must match mgsdelta-apworld's Locations.py exactly. This
-# reuses the existing "Kerotan Frog N" ID scheme (BASE_ID + index) as
-# placeholder location identities for duck-unlock-count thresholds, since
-# apworld's location tables don't have real duck-specific entries yet --
-# location N is checked once the live duck-unlock count reaches N. See
-# research/NOTES.md milestone 4 for why.
-LOCATION_BASE_ID = 3_901_000
+# Location IDs must match mgsdelta-apworld's Locations.py exactly -- these
+# are the 64 real "Gako Duck N" locations (DUCK_BASE_ID there), added in
+# that repo's build plan #4 once this milestone's live proof landed. Location
+# N is checked once the live duck-unlock count reaches N -- see
+# research/NOTES.md milestone 4.
+LOCATION_BASE_ID = 3_901_064
 LOCATION_COUNT = 64
 
 

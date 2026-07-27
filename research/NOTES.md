@@ -454,10 +454,11 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
 - **Confidence**: high — this is a real, repeatable, unattended write,
   verified by reading the actual property back afterward, not just "the
   call didn't error."
-- **What's left for milestone 4**: `mgsdelta-apworld` still needs real duck
-  locations (today `game_state.py`'s `LOCATION_BASE_ID` reuses the frog ID
-  scheme as a placeholder), and there's been no live run yet against an
-  actual generated seed + local Archipelago server — `client.py`'s
+- **What's left for milestone 4**: `mgsdelta-apworld` now has real duck
+  locations (its build plan #4 — 64 "Gako Duck N" locations plus a real
+  "Unlock Duck" item; `game_state.py`'s `LOCATION_BASE_ID` points at them
+  for real now), but there's been no live run yet against an actual
+  generated seed + local Archipelago server — `client.py`'s
   `MGSDeltaContext` has never been exercised against a real
   `mgsdelta_state.json`/`mgsdelta_commands.json` pair produced by this
   bridge mod. That full loop (real server → real `client.py` → real

@@ -123,13 +123,14 @@ reimplementing the network protocol.
    `false` to `true` on its own (see `research/NOTES.md` for the full
    debugging story, including two real UE4SS gotchas: hook callbacks need
    `self:get()` to unwrap before use, and `FindAllOf` is scoped to whatever
-   level is currently streamed in). What's left: `mgsdelta-apworld` growing
-   real duck locations to replace the placeholder reuse of its frog IDs (see
-   `game_state.py`'s `LOCATION_BASE_ID` comment), and an actual live run
-   against a real generated seed + local AP server — `client.py` has never
-   yet been exercised against this bridge mod's real state/commands files.
-   This is the project's proof-of-concept milestone, matched to the apworld
-   repo's milestone 3.
+   level is currently streamed in). `mgsdelta-apworld` now has real duck
+   locations too (its build plan #4 — 64 "Gako Duck N" locations plus a real
+   "Unlock Duck" item), and `game_state.py`'s `LOCATION_BASE_ID` points at
+   them for real, no longer reusing the frog-ID placeholder. What's left: an
+   actual live run against a real generated seed + local AP server —
+   `client.py` has never yet been exercised against this bridge mod's real
+   state/commands files. This is the project's proof-of-concept milestone,
+   matched to the apworld repo's milestone 3.
 5. **Expand the memory map**: grow `game_state.py`/`item_effects.py` to cover
    the full item/location set as the apworld repo's tables grow — one
    location/item is added to the apworld only once it's confirmed working here.
@@ -156,10 +157,11 @@ running Lua bridge mod (`Mods/MGSDeltaBridgeMod`) is written and **confirmed
 live**: it autonomously writes `state.json` on a timer, and remotely
 unlocked an uncollected duck purely from a `commands.json` entry with no
 player input — confirmed by observing the duck's `bColleted` flag flip on
-its own. See `research/NOTES.md` for the full debugging story. What's not
-done yet: matching duck locations on the `mgsdelta-apworld` side, and a real
-live run against a generated seed + local AP server (`client.py` hasn't yet
-been exercised against this bridge mod's real files). **Scope note**: the
+its own. See `research/NOTES.md` for the full debugging story.
+`mgsdelta-apworld` now has matching real duck locations too (its build
+plan #4). What's not done yet: a real live run against a generated seed +
+local AP server (`client.py` hasn't yet been exercised against this bridge
+mod's real files). **Scope note**: the
 duck collectible is the first real target (not frogs) — same subsystem, but
 the frog aggregate-count function isn't found yet and ducks already work
 end to end for both read and write.
