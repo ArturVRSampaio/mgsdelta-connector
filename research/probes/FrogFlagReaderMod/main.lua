@@ -167,11 +167,130 @@ local function TestGakoLifeWrite()
         tostring(okRestoreCall), tostring(okRestored and restored or "?")))
 end
 
+-- IPC feasibility probe for milestone 4: can this Lua environment write a
+-- plain file at all? If so, file-polling is a viable bridge between the
+-- external Python client and this in-game script (no sockets needed).
+local function TestFileIO()
+    local okOpen, fileOrErr = pcall(function()
+        return io.open("FrogFlagReaderMod_iotest.txt", "w")
+    end)
+    if not okOpen or not fileOrErr then
+        print(string.format("[FrogFlagReader] io.open FAILED: open_ok=%s result=%s\n",
+            tostring(okOpen), tostring(fileOrErr)))
+        return
+    end
+
+    local file = fileOrErr
+    local okWrite, writeErr = pcall(function()
+        file:write("hello from lua\n")
+        file:close()
+    end)
+    print(string.format("[FrogFlagReader] io.open/write ok=%s err=%s\n",
+        tostring(okWrite), tostring(writeErr)))
+end
+
+RegisterKeyBind(Key.NUM_FIVE, {ModifierKey.CONTROL}, TestFileIO)
+ExecuteWithDelay(6000, TestFileIO)
+
+-- Diagnostic for why the bridge mod's FindAllOf("GakoComponent") isn't
+-- finding an uncollected duck: list every live instance and its bColleted
+-- state directly, rather than guessing. Turned out to be level streaming --
+-- FindAllOf only returns whatever's currently loaded near the player, see
+-- the milestone 4 NOTES.md entry.
+local function DumpGakoComponents()
+    local components = FindAllOf("GakoComponent")
+    if not components then
+        print("[FrogFlagReader] FindAllOf(GakoComponent) returned nothing\n")
+        return
+    end
+    print(string.format("[FrogFlagReader] Found %d GakoComponent instance(s)\n", #components))
+    for i, component in ipairs(components) do
+        local okName, name = pcall(function() return component:GetFullName() end)
+        local okCollected, collected = pcall(function() return component.bColleted end)
+        print(string.format("[FrogFlagReader]   [%d] %s bColleted=%s (ok=%s)\n",
+            i, okName and name or "?", tostring(collected), tostring(okCollected)))
+    end
+end
+
+RegisterKeyBind(Key.NUM_FOUR, {ModifierKey.CONTROL}, DumpGakoComponents)
+
+-- bColleted is permanent across sessions (same trap as the duck-count
+-- tracker) so after a long playthrough almost everything nearby already
+-- reads true, and waiting to stumble on a genuinely uncollected duck isn't
+-- reliable. Instead, force whichever GakoComponent is currently loaded
+-- back to bColleted=false ourselves, purely as test setup, so the
+-- unlock_duck command path can be exercised deterministically.
+local function ForceUncollectNearbyGako()
+    local components = FindAllOf("GakoComponent")
+    if not components or #components == 0 then
+        print("[FrogFlagReader] ForceUncollectNearbyGako: no GakoComponent currently loaded\n")
+        return
+    end
+    local component = components[1]
+    local okName, name = pcall(function() return component:GetFullName() end)
+    local okSet, setErr = pcall(function() component:SetPropertyValue("bColleted", false) end)
+    local okCheck, after = pcall(function() return component.bColleted end)
+    print(string.format(
+        "[FrogFlagReader] ForceUncollectNearbyGako on %s SetPropertyValue ok=%s err=%s bColleted(after)=%s\n",
+        okName and name or "?", tostring(okSet), tostring(setErr), tostring(okCheck and after or "?")))
+end
+
+RegisterKeyBind(Key.NUM_THREE, {ModifierKey.CONTROL}, ForceUncollectNearbyGako)
+
+-- Ground truth instead of guessing from static function names: hook every
+-- plausible "duck got hit/shot" candidate and log which ones actually
+-- fire, on what object, when a real duck gets shot in gameplay. The
+-- persistent unlock counter can't tell us this since it's a one-shot
+-- (already-collected ducks never change), per-run reflection is our best
+-- source of truth here.
+local function LogHook(FunctionPath)
+    RegisterHook(FunctionPath, function(self, ...)
+        local ok, name = pcall(function() return self:GetFullName() end)
+        print(string.format("[FrogFlagReader] HOOK FIRED: %s on %s\n", FunctionPath, ok and name or "?"))
+    end)
+end
+
+LogHook("/Script/MGS3.GakoComponent:GakoDefenseCallback")
+LogHook("/Script/MGS3.GakoComponent:SetGakoEnemyNoise")
+LogHook("/Game/Blueprints/Gako/BP_Gako.BP_Gako_C:OnHit")
+LogHook("/Game/Blueprints/Gako/BP_Gako.BP_Gako_C:GakoHitSoundAndVFX")
+
+-- GakoSetCollected specifically: log synchronously at call time only --
+-- no delayed/async access to `self` afterward. An earlier version of this
+-- probe held onto `self` across an ExecuteWithDelay and crashed the game,
+-- likely a use-after-free if the duck actor gets destroyed shortly after
+-- collection. For the "after" state, use the safe Ctrl+Num4
+-- (DumpGakoComponents) keybind instead, which does a fresh FindAllOf
+-- query rather than holding a stale reference across time.
+RegisterHook("/Script/MGS3.GakoComponent:GakoSetCollected", function(self, ...)
+    -- `self` is a RemoteUnrealParam-style wrapper, not a plain UObject --
+    -- confirmed by testing: direct self:GetFullName()/self.bColleted give
+    -- nil/garbage, but self:get() unwraps to a real object where every
+    -- method/property access agrees. Always use the unwrapped object.
+    local okGet, unwrapped = pcall(function() return self:get() end)
+    if not okGet or not unwrapped then
+        print(string.format("[FrogFlagReader] GakoSetCollected: self:get() failed: %s\n", tostring(unwrapped)))
+        return
+    end
+
+    local okName, name = pcall(function() return unwrapped:GetFullName() end)
+    local okBefore, before = pcall(function() return unwrapped.bColleted end)
+    local okClass, className = pcall(function() return unwrapped:GetClass():GetFullName() end)
+    print(string.format(
+        "[FrogFlagReader] GakoSetCollected FIRING on %s (class=%s) bColleted(pre-call)=%s\n",
+        okName and name or "?",
+        okClass and className or "?",
+        tostring(okBefore and before or "?")))
+end)
+
 -- Manual triggers:
 --   Ctrl+Num9: read known counters
 --   Ctrl+Num8: dump every function/property on the subsystem's full class hierarchy
 --   Ctrl+Num7: milestone 3 write test v1 (GakoSetCollected on a live duck -- one-shot, kept for reference)
 --   Ctrl+Num6: milestone 3 write test v2 (Gako_Life decrement/restore -- repeatable)
+--   Ctrl+Num5: file I/O feasibility probe
+--   Ctrl+Num4: dump every live GakoComponent + its bColleted state
+--   Ctrl+Num3: force whichever GakoComponent is loaded back to bColleted=false (test setup only)
 RegisterKeyBind(Key.NUM_NINE, {ModifierKey.CONTROL}, ReadKerotanStatus)
 RegisterKeyBind(Key.NUM_EIGHT, {ModifierKey.CONTROL}, DumpKerotanSubsystemMembers)
 RegisterKeyBind(Key.NUM_SEVEN, {ModifierKey.CONTROL}, TestGakoWrite)

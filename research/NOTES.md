@@ -391,3 +391,75 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   mutation-tested in CI). Zero confidence yet on the full pipeline
   actually working live end to end — that's the real remaining
   milestone-4 work.
+
+### 2026-07-26: Milestone 4 write path confirmed live — bridge mod remotely unlocks a duck end to end
+
+- **Goal**: prove the real bridge mod (`Mods/MGSDeltaBridgeMod`, an always-
+  running `LoopAsync` script, not a manual keybind probe) can find an
+  uncollected duck and call `GakoSetCollected()` on it *on its own*, driven
+  purely by a command file — no player shot involved. This is the actual
+  mechanism an Archipelago item grant needs: the server decides to unlock a
+  duck, and the game has to reflect that with zero player input.
+- **Blocker hit first**: `FindAllOf("GakoComponent")` never found the duck
+  that was actually just shot, even though a `RegisterHook` on
+  `GakoComponent:GakoSetCollected` proved the real function fires reliably,
+  on a genuinely different object each time. Root-caused via two
+  discoveries, in order:
+  1. **The hook's `self` is a wrapper, not a plain object.** Calling
+     `self:GetFullName()` or reading `self.bColleted` directly inside a
+     `RegisterHook` callback gives nil/garbage — but `self:get()` unwraps
+     it to a real object where every method/property access agrees
+     correctly. Older bundled UE4SS example mods hint at this
+     (`RemoteUnrealParam<T>` in their doc comments) but the newer `Types.lua`
+     doc string is misleading here ("callback params are: UObject self...").
+     **Always call `self:get()` first inside a hook before touching `self`
+     at all.**
+  2. **`FindAllOf` is scoped to whatever sublevel is currently streamed
+     in.** Once the hook's unwrapped `self` gave a real, readable full path
+     (e.g. `.../Swampland_003/...:PersistentLevel.BP_Gako_Tree_C_1.gako`),
+     a fresh `DumpGakoComponents` (`FindAllOf` dump) taken immediately after
+     *did* find that exact instance — but a dump taken while standing in a
+     *different* area never did. Ducks aren't globally resident UObjects;
+     only the ones near the player are loaded at all. The earlier "FindAllOf
+     never finds the shot duck" mystery was simply checking from the wrong
+     place, not a UE4SS/binding bug. This is good news for the real bridge:
+     the player has to be standing next to a duck to shoot it, so it'll
+     always be loaded at the moment that matters.
+- **Second trap — same lesson as the duck-count tracker, applied to
+  `bColleted`**: `bColleted` is permanent across sessions, saved with the
+  game. After a long-lived save, nearly every duck the player has ever
+  walked near reads `bColleted=true` already, so hunting for a naturally
+  uncollected duck near the player is unreliable, not a real test strategy
+  (confirmed live: two different duck instances checked both already read
+  `true` — one from earlier same-session testing, one from an entirely
+  separate past playthrough on this save). **Fix**: added a
+  `ForceUncollectNearbyGako` probe keybind (Ctrl+Num3) that grabs whichever
+  `GakoComponent` is currently loaded and calls
+  `component:SetPropertyValue("bColleted", false)` on it directly — a
+  deliberate, reversible test-setup step, not a claim about the write path
+  itself (that's still `GakoSetCollected()`, exercised separately).
+- **The actual end-to-end proof**:
+  1. Forced a loaded duck's `bColleted` to `false` (confirmed via a fresh
+     `DumpGakoComponents` read: `bColleted=false`).
+  2. Wrote `[{"action": "unlock_duck"}]` to `mgsdelta_commands.json` from
+     outside the game (simulating what `memory.py`'s `FileBridge` will do
+     for a real received AP item).
+  3. Within one poll interval, `MGSDeltaBridgeMod` consumed and deleted
+     `mgsdelta_commands.json` on its own.
+  4. A follow-up `DumpGakoComponents` read showed the same duck now
+     `bColleted=true` — flipped with zero player input, purely by the
+     background bridge script finding it and calling `GakoSetCollected()`.
+  This is the full milestone-4 mechanism working live: command file in →
+  real game state change out, unattended.
+- **Confidence**: high — this is a real, repeatable, unattended write,
+  verified by reading the actual property back afterward, not just "the
+  call didn't error."
+- **What's left for milestone 4**: `mgsdelta-apworld` still needs real duck
+  locations (today `game_state.py`'s `LOCATION_BASE_ID` reuses the frog ID
+  scheme as a placeholder), and there's been no live run yet against an
+  actual generated seed + local Archipelago server — `client.py`'s
+  `MGSDeltaContext` has never been exercised against a real
+  `mgsdelta_state.json`/`mgsdelta_commands.json` pair produced by this
+  bridge mod. That full loop (real server → real `client.py` → real
+  commands file → real bridge mod → real game state) is the remaining
+  proof before calling milestone 4 fully done.
