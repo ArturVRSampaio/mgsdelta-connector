@@ -588,8 +588,19 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   `research/MGS3-Delta-Trainer-ref/` for reference.
 - **Confidence**: high — this is a real, visually-confirmed, live write to
   HUD-authoritative state, not a "call didn't error" result.
+- **Follow-up-turned-second-confirmation**: also ported `ToggleWeapon`
+  (`WeaponItemManager.cs`) to `research/probes/test_weapon_grant.py` and
+  tested granting the **Mosin** (The End's rifle, weapon index 15) on a save
+  that didn't own it yet — read back `BEFORE = -1` (matching the trainer's
+  documented "not owned" convention exactly), wrote `1`, and **the Mosin
+  appeared in the in-game weapon select menu**, confirmed visually. This is
+  the real proof that matters for Archipelago: granting an item/weapon the
+  player doesn't have at all, not just refilling ammo on one they already
+  own. Both the ammo-refill and grant-from-nothing cases are now live-
+  confirmed via this technique.
 - **Follow-up**: build a proper `native_memory.py` module in
-  `mgsdelta_connector` (AOB scan + range-filtered match + read/write),
-  and prove the same technique on the items table (item grant/unlock,
-  which is the closer analog to a real Archipelago item receive than ammo
-  refill) before wiring it into `client.py`/`item_effects.py`.
+  `mgsdelta_connector` (AOB scan + range-filtered match + read/write) and
+  wire it into `client.py`/`item_effects.py` as the real write path for
+  received Archipelago items, replacing the Blueprint-reflection write side
+  of the UE4SS bridge (the bridge's *read* side, e.g. duck-count detection,
+  is unaffected and still fine).
