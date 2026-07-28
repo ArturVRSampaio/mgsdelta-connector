@@ -506,3 +506,90 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
 - **Confidence**: high on every piece that's actually testable (unit tests
   + two independent live confirmations, read and write). Explicitly not
   claiming the untested slice as proven.
+
+### 2026-07-28: Ammo/item write path was a dead end via Blueprint reflection — solved via direct process memory instead
+
+- **Context**: an extended session trying to grant ammo (the intended
+  generalization of the duck/item-grant mechanism to weapons) hit a wall.
+  Every Blueprint setter tried against the live player's equip controller
+  (`SetStockedAmmoCount`, `SetLoadedAmmoCount`, `weapon:SetLoadedAmmoCount`,
+  `equip:SetStockedAmmoCount`) succeeded with no error but was a **silent
+  no-op** — read-back and in-game HUD both showed the value unchanged,
+  confirmed across multiple weapons (Patriot, Mk22) and even after a
+  weapon-switch-triggered cache-refresh theory (also disproven). Separately,
+  calling the game's own debug-menu cheat function
+  (`UGsrPlayerDebugMenuState::OnExecuteFullAmmo`, found via UE4SS's
+  `GenerateSDK()`/`CXXHeaderDump` — the header dumper is the answer to "can
+  we export all functions instead of guessing," and is worth using whenever
+  reflection exploration is needed again) reliably **crashed the game
+  engine natively**, 3/3 attempts, regardless of argument handling — not
+  catchable by Lua `pcall`, and undebuggable because `CXXHeaderDump` only
+  ever shows function signatures, never Blueprint graph bodies.
+- **Escalation**: installed FModel (a CUE4Parse-based GUI for
+  parsing/browsing the packed `.pak`/IoStore archives offline, no game
+  launch needed) to actually read `OnExecuteFullAmmo`'s real Blueprint graph
+  instead of guessing at its behavior via reflection. Non-obvious setup
+  gotchas worth recording:
+  - FModel auto-detected the wrong UE version (`GAME_UE4_LATEST`), causing
+    `Couldn't find LoaderGlobalNameHashes chunk in IoStore global.utoc`.
+    CUE4Parse has a **game-specific profile for this exact game**
+    (`GAME_MetalGearSolidDelta`, selectable in FModel's version dropdown) —
+    use that, not a generic "UE5.3".
+  - Blueprint decompilation to pseudo-C++ needs two separate settings
+    enabled (`Serialize Script Bytecode` and `Decompile Blueprint to Pseudo
+    C++`, both in Settings → Advanced) *and* a valid `.usmap` mapping file
+    selected via the Endpoint Configuration → Mapping button (not the
+    "Local Mapping File" toggle, which is for a different flow) — generated
+    our own via the game's `DumpUSMAP()` Lua global function. A prebuilt one
+    also exists on Nexus ("Metal Gear Solid Delta Fmodel Mapping File"),
+    unused here since ours already worked, but possibly more complete since
+    ours only covers classes loaded in memory at dump time.
+  - The actual per-asset "Decompile Blueprint" action is a right-click
+    context-menu item (only visible once "Show Decompile Option" is
+    enabled in Settings), not the default double-click (which just
+    re-exports the raw binary `.uasset`, no readable output).
+  - Once working, decompiled `BP_PlayerDebugMenuState_C` confirmed it's a
+    real Blueprint UberGraph with debug-menu-building logic
+    (`CreateDebugMenu()` wiring up `UIcsDebugMenuFloat`/`Bool`/`Enum`
+    widgets) — consistent with "this is dev-only tooling, not the real
+    gameplay item-grant path," which is exactly why it kept crashing and
+    why chasing it further wasn't the right move.
+- **The actual unblock**: searched for prior art more aggressively per user
+  request and found
+  [ANTIBigBoss/MGS3-Delta-Trainer](https://github.com/ANTIBigBoss/MGS3-Delta-Trainer)
+  — a public, from-scratch Cheat-Engine-style trainer (C#) built by AOB byte-
+  pattern scanning the game's raw process memory and read/writing fixed
+  offsets, with **zero use of UE4SS or Blueprint reflection**. This is the
+  answer to why every Blueprint setter was a no-op: the real,
+  HUD-authoritative `WeaponsTable`/`ItemsTable` are flat native data baked
+  into the exe image with no UObject/reflection metadata at all — outside
+  what UE4SS's Lua bindings can ever reach, since those only walk the
+  UObject/UClass graph.
+- **Confirmed live**: ported the trainer's `WeaponsTable` logic to Python
+  (`pymem`) in `research/probes/test_ammo_write.py`. First attempt used an
+  unrestricted full-module pattern scan and got a **false-positive match**
+  (garbage-looking `current_ammo=19640`, no in-game effect). Fixing the scan
+  to filter matches by the RVA range the original C# uses (there were 5
+  pattern matches module-wide, only 3 in range) found the real table
+  (`current_ammo=65`, matching what manual testing had shown earlier) —
+  writing `999`/`12` there **actually changed the MK22's ammo/clip on the
+  live HUD**, confirmed visually in-game. This is the first fully-confirmed
+  ammo write of the whole project.
+- **What this changes going forward**: ammo/weapon/item granting for the
+  Archipelago connector should go through this native-memory technique
+  (Python `pymem`, mirroring the trainer), not the UE4SS Lua bridge
+  (`memory.py`'s `FileBridge`) — that bridge may still be fine for *reading*
+  state (the duck-count mechanism above already works and isn't affected),
+  but should not be trusted for writing gameplay-authoritative values.
+  Concrete offsets/patterns for weapons and items (plus other
+  not-yet-used-but-validated hooks — health, stamina, stats, boss HP) are
+  now written up in `research/game-hooks.md` so this doesn't need
+  re-deriving. Full trainer source vendored at
+  `research/MGS3-Delta-Trainer-ref/` for reference.
+- **Confidence**: high — this is a real, visually-confirmed, live write to
+  HUD-authoritative state, not a "call didn't error" result.
+- **Follow-up**: build a proper `native_memory.py` module in
+  `mgsdelta_connector` (AOB scan + range-filtered match + read/write),
+  and prove the same technique on the items table (item grant/unlock,
+  which is the closer analog to a real Archipelago item receive than ammo
+  refill) before wiring it into `client.py`/`item_effects.py`.
