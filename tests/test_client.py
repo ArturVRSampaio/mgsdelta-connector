@@ -29,7 +29,7 @@ from NetUtils import NetworkItem
 from worlds import network_data_package
 
 from mgsdelta_connector.client import GAME_NAME, MGSDeltaContext
-from mgsdelta_connector.game_state import DuckCounts
+from mgsdelta_connector.game_state import FROG_LOCATION_BASE_ID, CollectibleCounts
 from mgsdelta_connector.item_effects import UNLOCK_DUCK_ITEM_NAME
 from mgsdelta_connector.memory import FileBridge
 
@@ -54,7 +54,7 @@ def test_init_sets_up_bridge_and_empty_tracking_state(tmp_path: Path) -> None:
     async def scenario() -> None:
         ctx = _make_context(tmp_path)
         assert ctx.game == GAME_NAME
-        assert ctx.previous_counts is None
+        assert ctx.previous_frog_counts is None
         assert ctx.granted_item_indices == set()
         ctx.keep_alive_task.cancel()
 
@@ -74,25 +74,53 @@ def test_poll_once_does_nothing_when_no_state_file_exists(tmp_path: Path) -> Non
     async def scenario() -> None:
         ctx = _make_context(tmp_path)
         await ctx.poll_once()
-        assert ctx.previous_counts is None
+        assert ctx.previous_frog_counts is None
         ctx.keep_alive_task.cancel()
 
     asyncio.run(scenario())
 
 
-def test_poll_once_tracks_duck_counts_across_two_reads(tmp_path: Path) -> None:
+def test_poll_once_tracks_frog_counts_across_two_reads(tmp_path: Path) -> None:
     state_path = tmp_path / "state.json"
 
     async def scenario() -> None:
         ctx = _make_context(tmp_path)
 
-        state_path.write_text(json.dumps({"duck_unlock_count": 33, "duck_total_count": 64}))
+        state_path.write_text(json.dumps({"frog_unlock_count": 40, "frog_total_count": 64}))
         await ctx.poll_once()
 
-        state_path.write_text(json.dumps({"duck_unlock_count": 35, "duck_total_count": 64}))
+        state_path.write_text(json.dumps({"frog_unlock_count": 41, "frog_total_count": 64}))
         await ctx.poll_once()
 
-        assert ctx.previous_counts == DuckCounts(unlocked=35, total=64)
+        assert ctx.previous_frog_counts == CollectibleCounts(unlocked=41, total=64)
+        ctx.keep_alive_task.cancel()
+
+    asyncio.run(scenario())
+
+
+def test_poll_once_sends_a_frog_check_once_the_count_grows(tmp_path: Path) -> None:
+    state_path = tmp_path / "state.json"
+
+    async def scenario() -> None:
+        ctx = _make_context(tmp_path)
+        sent: list[set[int]] = []
+
+        async def fake_check_locations(locations: set[int]) -> set[int]:
+            sent.append(set(locations))
+            return set()
+
+        ctx.check_locations = fake_check_locations
+
+        # First read only establishes the baseline -- no check is sent for
+        # it (matches the "first read is never a check" rule below).
+        state_path.write_text(json.dumps({"frog_unlock_count": 0, "frog_total_count": 64}))
+        await ctx.poll_once()
+
+        state_path.write_text(json.dumps({"frog_unlock_count": 1, "frog_total_count": 64}))
+        await ctx.poll_once()
+
+        assert len(sent) == 1
+        assert sent[0] == {FROG_LOCATION_BASE_ID}
         ctx.keep_alive_task.cancel()
 
     asyncio.run(scenario())

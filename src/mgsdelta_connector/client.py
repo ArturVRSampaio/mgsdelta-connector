@@ -18,7 +18,7 @@ import asyncio
 
 from CommonClient import CommonContext
 
-from .game_state import DuckCounts, locations_to_check, read_duck_counts
+from .game_state import CollectibleCounts, frog_locations_to_check, read_frog_counts
 from .item_effects import grant_item, items_to_grant
 from .memory import FileBridge
 
@@ -34,7 +34,7 @@ class MGSDeltaContext(CommonContext):
     ) -> None:
         super().__init__(server_address, password)
         self.bridge = bridge
-        self.previous_counts: DuckCounts | None = None
+        self.previous_frog_counts: CollectibleCounts | None = None
         self.granted_item_indices: set[int] = set()
 
     async def server_auth(self, password_requested: bool = False) -> None:
@@ -48,15 +48,15 @@ class MGSDeltaContext(CommonContext):
         await self.send_connect()
 
     async def poll_once(self) -> None:
-        current = read_duck_counts(self.bridge)
-        if current is not None:
-            to_check = locations_to_check(self.previous_counts, current)
+        current_frogs = read_frog_counts(self.bridge)
+        if current_frogs is not None:
+            to_check = frog_locations_to_check(self.previous_frog_counts, current_frogs)
             if to_check:
                 # No-ops safely with no live connection: check_locations()
                 # intersects with self.missing_locations, which is empty
                 # until a real server reports otherwise.
                 await self.check_locations(to_check)
-            self.previous_counts = current
+            self.previous_frog_counts = current_frogs
 
         for index, item_id in items_to_grant(self.items_received, self.granted_item_indices):
             # A local datapackage lookup, not a network call -- tests seed

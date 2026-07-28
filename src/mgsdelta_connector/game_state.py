@@ -1,7 +1,7 @@
 """
 Maps raw state reads (via memory.py's MemoryReader) to semantic game
-events. Currently just the duck ("Gako") unlock counter confirmed working
-in research/NOTES.md milestone 2 — grows in lockstep with
+events. Currently just the frog ("Kerotan") unlock counter confirmed
+working in research/NOTES.md milestone 5 — grows in lockstep with
 mgsdelta-apworld's Locations.py as more locations are confirmed readable.
 """
 
@@ -13,25 +13,25 @@ from .memory import MemoryReader
 
 
 @dataclass(frozen=True)
-class DuckCounts:
+class CollectibleCounts:
     unlocked: int
     total: int
 
 
-def read_duck_counts(reader: MemoryReader) -> DuckCounts | None:
-    """Reads the current duck unlock counts.
+def read_frog_counts(reader: MemoryReader) -> CollectibleCounts | None:
+    """Reads the current frog (Kerotan) unlock counts.
 
     Returns None if the game hasn't written a state file yet (not
     launched, or still on the main menu before the subsystem is live).
     """
     raw = reader.read_state()
-    if "duck_unlock_count" not in raw or "duck_total_count" not in raw:
+    if "frog_unlock_count" not in raw or "frog_total_count" not in raw:
         return None
-    return DuckCounts(unlocked=raw["duck_unlock_count"], total=raw["duck_total_count"])
+    return CollectibleCounts(unlocked=raw["frog_unlock_count"], total=raw["frog_total_count"])
 
 
-def newly_unlocked_count(previous: DuckCounts | None, current: DuckCounts) -> int:
-    """How many additional ducks were unlocked between two reads.
+def newly_unlocked_count(previous: CollectibleCounts | None, current: CollectibleCounts) -> int:
+    """How many additional collectibles were unlocked between two reads.
 
     Zero if this is the first read (no previous state to compare against)
     or the count didn't grow (e.g. an earlier save was reloaded) — a
@@ -43,22 +43,23 @@ def newly_unlocked_count(previous: DuckCounts | None, current: DuckCounts) -> in
 
 
 # Location IDs must match mgsdelta-apworld's Locations.py exactly -- these
-# are the 64 real "Gako Duck N" locations (DUCK_BASE_ID there), added in
-# that repo's build plan #4 once this milestone's live proof landed. Location
-# N is checked once the live duck-unlock count reaches N -- see
-# research/NOTES.md milestone 4.
-LOCATION_BASE_ID = 3_901_064
-LOCATION_COUNT = 64
+# are the 64 real "Kerotan Frog N" locations (BASE_ID there). Location N is
+# checked once the live frog-unlock count reaches N -- see
+# research/NOTES.md milestone 5.
+FROG_LOCATION_BASE_ID = 3_901_000
+FROG_LOCATION_COUNT = 64
 
 
-def location_ids_for_count(count: int) -> list[int]:
-    """Location IDs that should be checked once `count` ducks are unlocked."""
-    capped = min(count, LOCATION_COUNT)
-    return [LOCATION_BASE_ID + i for i in range(capped)]
+def frog_location_ids_for_count(count: int) -> list[int]:
+    """Location IDs that should be checked once `count` frogs are unlocked."""
+    capped = min(count, FROG_LOCATION_COUNT)
+    return [FROG_LOCATION_BASE_ID + i for i in range(capped)]
 
 
-def locations_to_check(previous: DuckCounts | None, current: DuckCounts) -> list[int]:
-    """Which location IDs newly need checking, given the previous and current duck counts."""
+def frog_locations_to_check(
+    previous: CollectibleCounts | None, current: CollectibleCounts
+) -> list[int]:
+    """Which frog location IDs newly need checking, given the previous and current counts."""
     if newly_unlocked_count(previous, current) <= 0:
         return []
-    return location_ids_for_count(current.unlocked)
+    return frog_location_ids_for_count(current.unlocked)

@@ -1,6 +1,6 @@
 -- Real bridge for mgsdelta-connector's milestone 4 vertical slice.
 --
--- Writes the live duck ("Gako") unlock counters to a state file on a
+-- Writes the live frog ("Kerotan") unlock counters to a state file on a
 -- timer, and polls a commands file for write requests from the external
 -- Python client (memory.py's FileBridge) -- see research/NOTES.md in
 -- mgsdelta-connector for why file polling is the chosen IPC mechanism,
@@ -19,14 +19,14 @@ local function WriteState()
         return
     end
 
-    local ok, status = pcall(function() return KerotanSubsystem:GetGakoUnlockStatus() end)
+    local ok, status = pcall(function() return KerotanSubsystem:GetKerotanUnlockStatus() end)
     if not ok or not status then
         return
     end
 
     local state = {
-        duck_unlock_count = status.UnlockCount,
-        duck_total_count = status.TotalCount,
+        frog_unlock_count = status.UnlockCount,
+        frog_total_count = status.TotalCount,
     }
 
     local okEncode, encoded = pcall(json.encode, state)
