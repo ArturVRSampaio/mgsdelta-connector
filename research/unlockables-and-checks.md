@@ -137,13 +137,58 @@ for completeness, not recommended as a near-term target.
 
 ## Immediate next research steps, in priority order
 
-1. Confirm whether `UGsrPlayerGetItemAction` (or similar) is a real,
-   hookable pickup-event distinct from writing the tables directly — this
-   unblocks the camo/item-pickup location group and resolves the
-   grant/detect collision above.
+1. ~~Confirm whether `UGsrPlayerGetItemAction` (or similar) is a real,
+   hookable pickup-event distinct from writing the tables directly~~ —
+   **partially answered (2026-07-28).** Bulk-decompiled the entire
+   `Gsr/Blueprints` tree via FModel (see `research/NOTES.md`) to check.
+   Finding: `UGsrPlayerGetItemAction`'s only exposed function is
+   `OnExecuteDebugGetItemEvent` — the same debug-menu-cheat pattern as
+   `OnExecuteFullAmmo`, which crashed the game earlier this session. More
+   broadly, the whole `Gsr/Blueprints` export confirms this game's actual
+   gameplay logic (item pickup, ammo, camo change) lives almost entirely in
+   **compiled native C++**, not Blueprint — every `BP_WP_*`/`BP_IT_*`
+   Blueprint checked is a thin config wrapper (mesh/anim/desc references
+   only) pointing at a native base class with no further logic exposed.
+   Large Blueprint files in the export are exclusively animation-graph
+   state machines (`ABP_Player*Action.cpp`, tens of thousands of lines),
+   not gameplay logic either. **Conclusion: Blueprint decompilation cannot
+   reveal the real pickup-event trigger, no matter how much more of the
+   tree gets exported — this is an architecture fact, not a search
+   problem.** The one promising path that survives this: UE4SS's
+   `RegisterHook` can hook **native** functions too, not just Blueprint
+   ones — this is exactly how milestone-4's duck-collection detection
+   worked (`GakoComponent:GakoSetCollected` is native). The real next step
+   is finding and hooking whatever native function actually fires on item
+   pickup (candidates: something on `AGsrItem`/`AGsrCBox`, or
+   `UGsrPlayerGetItemAction`'s real activation entry point, name currently
+   unknown) — not more Blueprint archaeology.
 2. Read `MapStringSub` live once, to see if area-transition detection is
    actually viable as a cheap early win.
 3. Cross-reference a real playthrough against the item lists above to
    split progression vs. useful vs. filler for real, instead of guessing.
 4. Boss-defeat detection needs its own investigation session — not a quick
    follow-up.
+
+## Closed investigation: equipped camo/face-paint write path (2026-07-28)
+
+Fully explored and abandoned for now — see `research/NOTES.md` for the
+complete writeup. Summary: the `MainPointerRegionOffset` pointer-chain
+trick was a dead end (didn't match the rendered state at all, despite
+looking plausible). The real state lives on a native
+`UUE4PairingCamouflageManager` subsystem (`CurrentInfo.Camouf`/`.facepaint`
+read correctly and match the HUD). Writing it isn't safe with what we
+currently know:
+- Calling `UpdateCamouflageByNoPairing` directly crashed the game.
+- The real calling sequence appears to be `BeginCamouflage` →
+  `UpdateCamouflageByNoPairing` → `EndCamouflage` (reverse-engineered from
+  `BP_Player.cpp`'s own delegate subscriptions — the visual mesh only
+  actually updates in the `EndCamouflage` handler, via
+  `DirtyManager->ChangeCamouflage`/`ChangeFacePaint`), but `BeginCamouflage`
+  and `EndCamouflage` could not be resolved as callable `UFunction`s via
+  either `StaticFindObject` or `Class:ForEachFunction` — they appear to be
+  delegate-signature documentation in `CXXHeaderDump`, not real separate
+  functions, and nothing in the decompiled export actually calls them
+  either (only `BP_Player.cpp`'s subscribe side exists). Whatever really
+  invokes this sequence is native C++, invisible to us without
+  disassembly. Not a near-term target; use the game's own menu manually
+  for this instead.

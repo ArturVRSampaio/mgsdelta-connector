@@ -1017,41 +1017,87 @@ end
 
 RegisterKeyBind(Key.G, {ModifierKey.CONTROL}, ProbeCamouflageManager)
 
--- UpdateCamouflageByNoPairing is a native (non-Blueprint) function on
--- UUE4PairingCamouflageManager -- much lower crash risk than the debug
--- menu's Blueprint UberGraph functions that crashed the game earlier this
--- session. EFacePaintType/ECamouflageType values come straight from
--- MGS3_enums.hpp: GM_FACEPAINT_NONE=0, GM_CAMOUF_NAKED=11.
-local function TrySetNakedNoFacepaint()
+-- Real calling sequence, reverse-engineered from BP_Player.cpp's own
+-- delegate bindings (decompiled via FModel, see research/NOTES.md):
+-- BeginCamouflage -> UpdateCamouflageByNoPairing -> EndCamouflage. The
+-- player Blueprint only actually updates the visual mesh
+-- (DirtyManager->ChangeCamouflage/ChangeFacePaint) inside its
+-- OnEndCamouflageApplying handler, which fires from EndCamouflage -- our
+-- earlier bare UpdateCamouflageByNoPairing call (no Begin/End) crashed the
+-- game, most likely from skipping this setup/teardown pairing entirely.
+-- Logs after every single step so a crash still tells us which step it
+-- reached (an actual engine crash still kills the log after that point,
+-- but at least we know how far it got).
+local function TrySetNakedNoFacepaintSequenced()
     local Manager = FindFirstOf("UE4PairingCamouflageManager")
     if not Manager or not Manager:IsValid() then
-        print("[FrogFlagReader] TrySetNakedNoFacepaint: no live UE4PairingCamouflageManager found\n")
+        print("[FrogFlagReader] TrySetNakedNoFacepaintSequenced: no live UE4PairingCamouflageManager found\n")
+        return
+    end
+
+    local okGroup, groupInfo = pcall(function() return Manager.SnakeGroupInfo end)
+    print(string.format("[FrogFlagReader] Step 0: SnakeGroupInfo ok=%s valid=%s\n",
+        tostring(okGroup), tostring(okGroup and groupInfo and groupInfo:IsValid())))
+    if not okGroup or not groupInfo or not groupInfo:IsValid() then
+        print("[FrogFlagReader] Aborting: no valid SnakeGroupInfo to pass to Begin/EndCamouflage\n")
         return
     end
 
     local okBefore, infoBefore = pcall(function() return Manager.CurrentInfo end)
     if okBefore and infoBefore then
-        print(string.format(
-            "[FrogFlagReader] BEFORE Camouf=%s facepaint=%s\n",
-            tostring(infoBefore.Camouf), tostring(infoBefore.facepaint)
-        ))
+        print(string.format("[FrogFlagReader] BEFORE Camouf=%s facepaint=%s\n",
+            tostring(infoBefore.Camouf), tostring(infoBefore.facepaint)))
     end
 
-    local okCall, err = pcall(function()
-        Manager:UpdateCamouflageByNoPairing(0, 11) -- GM_FACEPAINT_NONE, GM_CAMOUF_NAKED
-    end)
-    print(string.format("[FrogFlagReader] UpdateCamouflageByNoPairing ok=%s err=%s\n", tostring(okCall), tostring(err)))
+    -- BeginCamouflage/EndCamouflage collide with same-named
+    -- MulticastInlineDelegateProperty fields on this class -- calling
+    -- Manager:BeginCamouflage(...) resolves to the property, not the
+    -- function ("Property type 'MulticastInlineDelegateProperty' not
+    -- supported", confirmed live). StaticFindObject couldn't resolve the
+    -- function directly either. Use the same ForEachFunction + GetFullName
+    -- match already proven working in DumpFunctionParams above instead.
+    local function FindFunctionByFullName(fullName)
+        local okClass, Class = pcall(function() return Manager:GetClass() end)
+        if not okClass or not Class or not Class:IsValid() then return nil end
+        local found = nil
+        Class:ForEachFunction(function(Function)
+            local okName, name = pcall(function() return Function:GetFullName() end)
+            if okName and name == fullName then
+                found = Function
+            end
+        end)
+        return found
+    end
+
+    local BeginFn = FindFunctionByFullName("Function /Script/MGS3.UE4PairingCamouflageManager:BeginCamouflage")
+    if not BeginFn then
+        print("[FrogFlagReader] Step 1: couldn't resolve BeginCamouflage UFunction via ForEachFunction\n")
+        return
+    end
+    local okBegin, errBegin = pcall(function() Manager:CallFunction(BeginFn, groupInfo, true) end)
+    print(string.format("[FrogFlagReader] Step 1: BeginCamouflage ok=%s err=%s\n", tostring(okBegin), tostring(errBegin)))
+    if not okBegin then return end
+
+    local okUpdate, errUpdate = pcall(function() Manager:UpdateCamouflageByNoPairing(0, 11) end) -- None, Naked
+    print(string.format("[FrogFlagReader] Step 2: UpdateCamouflageByNoPairing ok=%s err=%s\n", tostring(okUpdate), tostring(errUpdate)))
+    if not okUpdate then return end
+
+    local EndFn = FindFunctionByFullName("Function /Script/MGS3.UE4PairingCamouflageManager:EndCamouflage")
+    if not EndFn then
+        print("[FrogFlagReader] Step 3: couldn't resolve EndCamouflage UFunction via ForEachFunction\n")
+        return
+    end
+    local okEnd, errEnd = pcall(function() Manager:CallFunction(EndFn, groupInfo, true) end)
+    print(string.format("[FrogFlagReader] Step 3: EndCamouflage ok=%s err=%s\n", tostring(okEnd), tostring(errEnd)))
 
     local okAfter, infoAfter = pcall(function() return Manager.CurrentInfo end)
     if okAfter and infoAfter then
-        print(string.format(
-            "[FrogFlagReader] AFTER Camouf=%s facepaint=%s\n",
-            tostring(infoAfter.Camouf), tostring(infoAfter.facepaint)
-        ))
+        print(string.format("[FrogFlagReader] AFTER Camouf=%s facepaint=%s\n",
+            tostring(infoAfter.Camouf), tostring(infoAfter.facepaint)))
     end
 end
 
-RegisterKeyBind(Key.H, {ModifierKey.CONTROL}, TrySetNakedNoFacepaint)
+RegisterKeyBind(Key.H, {ModifierKey.CONTROL}, TrySetNakedNoFacepaintSequenced)
 
 -- Also try automatically a few seconds after the mod loads, in case the
 -- game is already in a gameplay session. TestGakoWrite is NOT auto-run --
