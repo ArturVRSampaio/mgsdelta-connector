@@ -152,6 +152,49 @@ For the full authoritative enumeration (including every camo/face-paint
 name), read `research/MGS3-Delta-Trainer-ref/WeaponItemManager.cs` directly
 rather than trusting a re-transcription.
 
+## Equipped camo/facepaint — ⚠️ read confirmed live, write conclusively ruled out (not via UE4SS reflection)
+
+Note this is a **different concept** from the table above — the table is
+*possession* (do you own this camo at all); this is *what's currently
+worn*. Two entirely separate memory locations.
+
+- **Read**: `UUE4PairingCamouflageManager` (a native `USnakeSubsystem`,
+  found via `FindFirstOf`) → `CurrentInfo.Camouf`/`.facepaint` (both
+  `int32`, real enum values from `MGS3_enums.hpp`'s `ECamouflageType`/
+  `EFacePaintType`). Confirmed accurate against a real screenshot.
+  Static in-object offsets (from `CXXHeaderDump`'s `MGS3.hpp`, no
+  TMap/array work needed): `CurrentInfo` is at `+0x210` inside the
+  manager object; within that, `facepaint` is `+0x00`, `Camouf` is
+  `+0x04`. Get the manager's live address once via UE4SS
+  (`FindFirstOf` + `:GetAddress()`, see `FrogFlagReaderMod`'s `Ctrl+C`
+  probe), then read directly via `pymem` — same pattern as
+  `SnakeFoodsMemoryData`'s address.
+- **Write: three independent techniques tried, all fail, for three
+  different (informative) reasons**:
+  1. The `MainPointerRegionOffset` pointer chain (`Constants.cs`
+     `MainPointerAddresses`) — proven connected to nothing at all
+     (writing had zero effect, and the enum-value "coincidence" that made
+     it look plausible was just that, a coincidence).
+  2. Calling `UpdateCamouflageByNoPairing(EFacePaintType, ECamouflageType)`
+     directly — **crashes the engine**, even with real enum values.
+     Likely needs the full `BeginCamouflage → UpdateCamouflageByNoPairing
+     → EndCamouflage` sequence (reverse-engineered from `BP_Player.cpp`'s
+     delegate bindings) which hasn't been gotten working either.
+  3. A plain field write on `CurrentInfo.Camouf` itself (bypassing both
+     of the above entirely) — write lands and reads back correctly
+     immediately, **but gets silently reverted on its own** on a
+     follow-up read, and the in-game character never visually changes.
+     This means `CurrentInfo` is a **downstream mirror, continuously
+     re-synced from the real source** — not stale-but-readable, not
+     write-once-sticks. Conclusively rules out `CurrentInfo` as a write
+     target (unlike attempts 1-2, which left some ambiguity about
+     whether a different offset/argument might have worked).
+- **Not yet tried**: finding whatever native function/tick actually
+  *writes into* `CurrentInfo` (the real upstream source), and either
+  hooking it (same code-injection technique as the food breakthrough) or
+  finding where it reads its own source data from. This is the live open
+  end for equipped camo/facepaint.
+
 ## Other confirmed hooks (not yet used by this project, but validated by the trainer)
 
 These use a different mechanism — a single main pointer
@@ -247,10 +290,109 @@ real mechanic: the same creature can be caught alive (to release/throw/use
 as bait) or consumed as food — two different inventory concepts, both
 tracked in the same `SnakeFoodsMemoryData`/`EvaFoodsMemoryData` maps.
 
-### Still unknown
+## Live carried food/animal inventory — ✅ confirmed live (read), via code-injection hook
 
-Where the **live carried count** (e.g. "you currently have 2 Mushroom E")
-actually lives — not this map, not the `ItemsTable`. Needs its own
-investigation, likely another live UObject/component (possibly on
-`UGsrItemController` or a dedicated food/survival component), read via the
-same reflection technique once found.
+Not the same data as the lifetime log above. This is "what's actually in
+your pack right now" — found 2026-07-29, source of truth this time was a
+**community Cheat Engine table**, not the C# trainer (which has no food
+support at all): [`RMLSNK`'s table on FearLess Revolution](https://fearlessrevolution.com/viewtopic.php?t=36267),
+vendored at `research/MGS3-Delta-Trainer-ref/mgsd_ce_table_v9.ct`
+(targets game patch 1.1.3).
+
+**Why this needed a different technique than everything else in this
+file.** `SnakeFoodsMemoryData` (the lifetime log) and `WeaponsTable`/
+`ItemsTable` (flat exe-baked arrays) are both just *data* sitting at a
+findable address. The live carried-food list isn't backed by any
+standing data structure UE4SS reflection or AOB scanning can find on its
+own — it only exists as a transient value in the `rax` register at one
+specific point inside the game's own compiled code (the function that
+resolves "which food occupies this equip-swap slot"), when that code
+path actually runs (i.e., when the player cycles their equipped
+item/food selection in-game). The CE table's approach — and the only way
+to get at this — is a **code-injection hook**: redirect that one
+instruction to a small stub that copies `rax` into memory we control,
+then re-executes the original instruction and jumps back. This is a
+categorically different (and riskier) technique than everything else
+documented in this file: it patches live executable code, not data.
+Ported to pure Python/`pymem`/`ctypes` (no Cheat Engine GUI, no UE4SS) in
+`research/probes/food_slot_hook.py`; confirmed live end-to-end against a
+real screen (see below).
+
+### The hook
+
+- Process/module: `MGSDelta-Win64-Shipping.exe` (same as everywhere else).
+- AOB pattern: `D3 4C 63 00 41 81 F8 82 00 00 00` (11 bytes, confirmed
+  **unique** module-wide this session — no RVA filtering needed, unlike
+  `WeaponsTable`/`ItemsTable`).
+- Patch address = `aob_address + 1`. The 10 bytes there
+  (`4C 63 00 41 81 F8 82 00 00 00` — `movsxd r8,dword ptr [rax]` +
+  `cmp r8d,0x82`) are the original instructions being hooked; verify they
+  match before patching anything (a mismatch means the game patch version
+  moved and this offset needs re-finding).
+- Allocate a small RWX code cave **within ±2GB of the patch address**
+  (required for a 5-byte relative `jmp` to reach it — `food_slot_hook.py`'s
+  `_alloc_near` does this by walking `VirtualAllocEx` candidates outward
+  from the target in 64KB steps). Stub: `mov [rip+disp32],rax` (captures
+  the pointer) → the two original instructions, re-executed → `jmp` back
+  to right after the patched region.
+- Patch the live 10 bytes to `jmp` (5 bytes) + `nop×5`, matching the
+  original instruction length exactly. Always restore the original 10
+  bytes and free the code cave when done (`disable_hook()`) — this is
+  live code patching, don't leave it in place.
+- The captured pointer stays nil until the hooked code path actually
+  runs — in practice, open the food/survival menu and/or cycle the
+  equip-swap selection once in-game.
+
+### The data layout, once the pointer is populated
+
+Two separate arrays hang off the captured pointer (`ptr`), both holding
+raw food/animal IDs (`EWeaponName` values, same table as the lifetime
+log above) as a single byte per slot:
+
+- **Quick-select hotbar, 3 slots**: `ptr+0x00`, `ptr+0x08`, `ptr+0x10`.
+  `0` = empty slot.
+- **Extended list, 16 slots, stride 8 bytes**: `ptr+0x98` through
+  `ptr+0x110` inclusive (`ptr + 0x98 + 8*i` for `i` in `0..15`). Confirmed
+  **byte-for-byte against a real, live food menu screen** — every ID and
+  every count matched exactly (initial mismatch on one item was the human
+  miscounting from not scrolling the in-game list, not a data error).
+  Multiple slots can hold the same ID — this is one slot per physical
+  carried item, **not** deduplicated by type, so "how many do I have of
+  X" is just "how many of these 16 slots hold id X."
+- Do not trust single-byte matches at other offsets within this region
+  (e.g. `ptr+0x9C`, `ptr+0xA4`) — those are incidental collisions with
+  other struct fields (rot/freshness bytes etc.) that happen to fall in
+  the valid ID range; only offsets that are exact multiples of 8 from the
+  `0x98` base are real slots.
+- Beyond `ptr+0x110` the data degenerates into unrelated adjacent memory
+  (spurious repeated "matches" like id 127 at irregular offsets) — don't
+  read past `0x110`.
+
+### Write path — ✅ confirmed live
+
+Plain `write_uchar` on the 16 extended-list slot addresses works exactly
+as expected, no crash, no special handling needed beyond the write
+itself — same low-risk class as the `SnakeFoodsMemoryData` `EatNum` write
+proof, confirmed correct this time too. Tested live, visually confirmed
+against the real in-game food menu on every step:
+
+1. Wrote id `70` (Hornet's Nest) to all 16 slots (`ptr + 0x98 + 8*i`,
+   `i` in `0..15`) — every carried item visually turned into Hornet's
+   Nest in-game.
+2. Wrote `0` (empty) to all 16 slots — food list went empty in-game.
+3. Wrote id `70` again — full 16-slot list back, all Hornet's Nest.
+
+This is a real, working grant/remove mechanism for carried food, not
+just a read. The quick-hotbar slots (`+0x00`/`+0x08`/`+0x10`) are a
+separate array — a live-caught animal there (id 98-130 range) is
+unaffected by writes to the extended list, confirmed by observation
+(Giant Anaconda stayed in the hotbar slot through all three writes
+above, since it's a live-animal id, not a food id).
+
+**Caveat carried over from the read side**: the `getFoods` pointer is
+only valid for the lifetime of whatever backing structure it points to.
+It survived a screen close+reopen in this session (same pointer value
+before and after), but that's one data point, not a guarantee — always
+re-check `read_pointer()` is non-nil and the same/plausible value before
+writing in a fresh session, and re-run `enable_hook()` fresh (new AOB
+scan) after any game restart, since the module base address changes.

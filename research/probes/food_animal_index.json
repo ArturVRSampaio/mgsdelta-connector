@@ -1,0 +1,489 @@
+{
+  "generic_slots": [
+    {
+      "id": 31,
+      "name": "FD_FoodSlot0"
+    },
+    {
+      "id": 32,
+      "name": "FD_FoodSlot1"
+    },
+    {
+      "id": 33,
+      "name": "FD_FoodSlot2"
+    },
+    {
+      "id": 34,
+      "name": "FD_FoodSlot3"
+    },
+    {
+      "id": 35,
+      "name": "FD_FoodSlot4"
+    },
+    {
+      "id": 36,
+      "name": "FD_FoodSlot5"
+    },
+    {
+      "id": 37,
+      "name": "FD_FoodSlot6"
+    },
+    {
+      "id": 38,
+      "name": "FD_FoodSlot7"
+    },
+    {
+      "id": 39,
+      "name": "FD_FoodSlot8"
+    },
+    {
+      "id": 40,
+      "name": "FD_FoodSlot9"
+    },
+    {
+      "id": 41,
+      "name": "FD_FoodSlot10"
+    },
+    {
+      "id": 42,
+      "name": "FD_FoodSlot11"
+    },
+    {
+      "id": 43,
+      "name": "FD_FoodSlot12"
+    },
+    {
+      "id": 44,
+      "name": "FD_FoodSlot13"
+    },
+    {
+      "id": 45,
+      "name": "FD_FoodSlot14"
+    },
+    {
+      "id": 46,
+      "name": "FD_FoodSlot15"
+    },
+    {
+      "id": 47,
+      "name": "FD_AnimalSlot0"
+    },
+    {
+      "id": 48,
+      "name": "FD_AnimalSlot1"
+    },
+    {
+      "id": 49,
+      "name": "FD_AnimalSlot2"
+    }
+  ],
+  "food": [
+    {
+      "id": 50,
+      "name": "Hebi A (snake)",
+      "display_name": "King Cobra"
+    },
+    {
+      "id": 51,
+      "name": "Hebi B (snake)",
+      "display_name": "Taiwanese Cobra"
+    },
+    {
+      "id": 52,
+      "name": "Hebi C (snake)",
+      "display_name": "Thai Cobra"
+    },
+    {
+      "id": 53,
+      "name": "Hebi D (snake)",
+      "display_name": "Coral Snake"
+    },
+    {
+      "id": 54,
+      "name": "Hebi E (snake)",
+      "display_name": "Milk Snake"
+    },
+    {
+      "id": 55,
+      "name": "Hebi F (snake)",
+      "display_name": "Green Tree Python"
+    },
+    {
+      "id": 56,
+      "name": "Hebi G (snake)",
+      "display_name": "Giant Anaconda"
+    },
+    {
+      "id": 57,
+      "name": "Hebi H (snake)",
+      "display_name": "Reticulated Python"
+    },
+    {
+      "id": 58,
+      "name": "Hebi I (snake)",
+      "display_name": "Liquid"
+    },
+    {
+      "id": 59,
+      "name": "Hebi J (snake)",
+      "display_name": "Solid"
+    },
+    {
+      "id": 60,
+      "name": "Hebi K (snake)",
+      "display_name": "Solidus"
+    },
+    {
+      "id": 61,
+      "name": "Crocodile",
+      "display_name": "Indian Gavial"
+    },
+    {
+      "id": 62,
+      "name": "Frog A",
+      "display_name": "Otton Frog"
+    },
+    {
+      "id": 63,
+      "name": "Frog B",
+      "display_name": "Tree Frog"
+    },
+    {
+      "id": 64,
+      "name": "Frog C",
+      "display_name": "Poison Dart Frog"
+    },
+    {
+      "id": 65,
+      "name": "Rat",
+      "display_name": "Rat"
+    },
+    {
+      "id": 66,
+      "name": "Rabbit",
+      "display_name": "European Rabbit"
+    },
+    {
+      "id": 67,
+      "name": "Squirrel",
+      "display_name": "Japanese Flying Squirrel"
+    },
+    {
+      "id": 68,
+      "name": "Mutton",
+      "display_name": "Markhor"
+    },
+    {
+      "id": 69,
+      "name": "Bat",
+      "display_name": "Vampire Bat"
+    },
+    {
+      "id": 70,
+      "name": "Beehive",
+      "display_name": "HORNET'S NEST"
+    },
+    {
+      "id": 71,
+      "name": "Scorpion",
+      "display_name": "Emperor Scorpion"
+    },
+    {
+      "id": 72,
+      "name": "Spider",
+      "display_name": "Cobalt Blue Tarantula"
+    },
+    {
+      "id": 73,
+      "name": "Bird A",
+      "display_name": "Parrot"
+    },
+    {
+      "id": 74,
+      "name": "Bird B",
+      "display_name": "White-Rumped Vulture"
+    },
+    {
+      "id": 75,
+      "name": "Bird C",
+      "display_name": "Red Avadavat"
+    },
+    {
+      "id": 76,
+      "name": "Bird D",
+      "display_name": "Magpie"
+    },
+    {
+      "id": 77,
+      "name": "Bird E",
+      "display_name": "Sunda Whistling-Thrush"
+    },
+    {
+      "id": 78,
+      "name": "Fish A",
+      "display_name": "Bigeye Trevally"
+    },
+    {
+      "id": 79,
+      "name": "Fish B",
+      "display_name": "Maroon Shark"
+    },
+    {
+      "id": 80,
+      "name": "Fish C",
+      "display_name": "Arowana"
+    },
+    {
+      "id": 81,
+      "name": "Crab",
+      "display_name": "Kenyan Mangrove Crab"
+    },
+    {
+      "id": 82,
+      "name": "Mushroom A",
+      "display_name": "Russian Oyster Mushroom"
+    },
+    {
+      "id": 83,
+      "name": "Mushroom B",
+      "display_name": "U. Luminescent Mushroom"
+    },
+    {
+      "id": 84,
+      "name": "Mushroom C",
+      "display_name": "Siberian Inkcap"
+    },
+    {
+      "id": 85,
+      "name": "Mushroom D",
+      "display_name": "Fly Agaric"
+    },
+    {
+      "id": 86,
+      "name": "Mushroom E",
+      "display_name": "Russian Glowcap"
+    },
+    {
+      "id": 87,
+      "name": "Mushroom F",
+      "display_name": "Spatsa"
+    },
+    {
+      "id": 88,
+      "name": "Mushroom G",
+      "display_name": "Baikal Scaly Tooth"
+    },
+    {
+      "id": 89,
+      "name": "Fruit A",
+      "display_name": "Yabloko Moloko"
+    },
+    {
+      "id": 90,
+      "name": "Fruit B",
+      "display_name": "Russian False Mango"
+    },
+    {
+      "id": 91,
+      "name": "Fruit C",
+      "display_name": "Golova"
+    },
+    {
+      "id": 92,
+      "name": "Vegetable A",
+      "display_name": "Vine Melon"
+    },
+    {
+      "id": 93,
+      "name": "Noodle",
+      "display_name": "Instant Noodles"
+    },
+    {
+      "id": 94,
+      "name": "Ration",
+      "display_name": "Ration"
+    },
+    {
+      "id": 95,
+      "name": "Potato",
+      "display_name": "Calorie Mate"
+    },
+    {
+      "id": 96,
+      "name": "Beehive (pain variant)",
+      "display_name": "HIVE OF PAIN HORNETS"
+    },
+    {
+      "id": 97,
+      "name": "Tutinoko",
+      "display_name": "Tsuchinoko"
+    }
+  ],
+  "live_animal": [
+    {
+      "id": 98,
+      "name": "Hebi A (snake), live",
+      "display_name": "King Cobra"
+    },
+    {
+      "id": 99,
+      "name": "Hebi B (snake), live",
+      "display_name": "Taiwanese Cobra"
+    },
+    {
+      "id": 100,
+      "name": "Hebi C (snake), live",
+      "display_name": "Thai Cobra"
+    },
+    {
+      "id": 101,
+      "name": "Hebi D (snake), live",
+      "display_name": "Coral Snake"
+    },
+    {
+      "id": 102,
+      "name": "Hebi E (snake), live",
+      "display_name": "Milk Snake"
+    },
+    {
+      "id": 103,
+      "name": "Hebi F (snake), live",
+      "display_name": "Green Tree Python"
+    },
+    {
+      "id": 104,
+      "name": "Hebi G (snake), live",
+      "display_name": "Giant Anaconda"
+    },
+    {
+      "id": 105,
+      "name": "Hebi H (snake), live",
+      "display_name": "Reticulated Python"
+    },
+    {
+      "id": 106,
+      "name": "Hebi I (snake), live",
+      "display_name": "Liquid"
+    },
+    {
+      "id": 107,
+      "name": "Hebi J (snake), live",
+      "display_name": "Solid"
+    },
+    {
+      "id": 108,
+      "name": "Hebi K (snake), live",
+      "display_name": "Solidus"
+    },
+    {
+      "id": 109,
+      "name": "Crocodile, live",
+      "display_name": "Indian Gavial"
+    },
+    {
+      "id": 110,
+      "name": "Frog A, live",
+      "display_name": "Otton Frog"
+    },
+    {
+      "id": 111,
+      "name": "Frog B, live",
+      "display_name": "Tree Frog"
+    },
+    {
+      "id": 112,
+      "name": "Frog C, live",
+      "display_name": "Poison Dart Frog"
+    },
+    {
+      "id": 113,
+      "name": "Rat, live",
+      "display_name": "Rat"
+    },
+    {
+      "id": 114,
+      "name": "Rabbit, live",
+      "display_name": "European Rabbit"
+    },
+    {
+      "id": 115,
+      "name": "Squirrel, live",
+      "display_name": "Japanese Flying Squirrel"
+    },
+    {
+      "id": 116,
+      "name": "Mutton, live",
+      "display_name": "Markhor"
+    },
+    {
+      "id": 117,
+      "name": "Bat, live",
+      "display_name": "Vampire Bat"
+    },
+    {
+      "id": 118,
+      "name": "Beehive, live",
+      "display_name": "HORNET'S NEST"
+    },
+    {
+      "id": 119,
+      "name": "Scorpion, live",
+      "display_name": "Emperor Scorpion"
+    },
+    {
+      "id": 120,
+      "name": "Spider, live",
+      "display_name": "Cobalt Blue Tarantula"
+    },
+    {
+      "id": 121,
+      "name": "Bird A, live",
+      "display_name": "Parrot"
+    },
+    {
+      "id": 122,
+      "name": "Bird B, live",
+      "display_name": "White-Rumped Vulture"
+    },
+    {
+      "id": 123,
+      "name": "Bird C, live",
+      "display_name": "Red Avadavat"
+    },
+    {
+      "id": 124,
+      "name": "Bird D, live",
+      "display_name": "Magpie"
+    },
+    {
+      "id": 125,
+      "name": "Bird E, live",
+      "display_name": "Sunda Whistling-Thrush"
+    },
+    {
+      "id": 126,
+      "name": "Fish A, live",
+      "display_name": "Bigeye Trevally"
+    },
+    {
+      "id": 127,
+      "name": "Fish B, live",
+      "display_name": "Maroon Shark"
+    },
+    {
+      "id": 128,
+      "name": "Fish C, live",
+      "display_name": "Arowana"
+    },
+    {
+      "id": 129,
+      "name": "Crab, live",
+      "display_name": "Kenyan Mangrove Crab"
+    },
+    {
+      "id": 130,
+      "name": "Tutinoko, live",
+      "display_name": "Tsuchinoko"
+    }
+  ]
+}

@@ -62,6 +62,35 @@ apworld's pool design:
   grantable content) and `BATTERY` (index 46 — trainer's own notes flag its
   purpose as unclear; don't rely on it without more research).
 
+### Food/animal items — ✅ confirmed feasible (read + write both live), different mechanism from weapons/items
+
+Full ID table in `research/probes/food_animal_index.json`. Grant/remove
+mechanism is a **code-injection hook**, not AOB or reflection — see
+`research/game-hooks.md`'s "Live carried food/animal inventory" section
+for the full technique. Confirmed live 2026-07-29: wrote a food ID to all
+16 carried-food slots, visually confirmed in-game, then cleared them,
+then refilled — a real, working grant/remove path.
+
+- **Caveats specific to this mechanism, unlike weapons/items**: the write
+  target is a **transient pointer** captured by hooking a live
+  instruction, not a fixed exe-baked address — needs the hook installed
+  (patches live executable code, real crash risk if done wrong, unlike
+  the passive weapon/item AOB reads) and the pointer populated (requires
+  the player to trigger the equip-swap/food-cycle code path at least once
+  per session) before any grant/remove can happen. Not a simple "call
+  this function" — connector integration would need to keep the hook
+  installed for the session and handle the pointer being nil until that
+  trigger happens.
+- **Filler/collectible candidate**: 48 distinct food/animal types (IDs
+  50–97, food form) plus their live-caught counterparts (98–130) — a
+  natural filler item type ("+1 [food name]"), similar in spirit to ammo
+  refill. Not evaluated yet for progression relevance (nothing in this
+  game is gated behind having specific food, as far as known).
+- **Slot-count limit**: only 16 extended slots + 3 quick-hotbar slots
+  confirmed — unclear yet whether this is a hard cap on total carried
+  food/animal instances or just how many this particular hook can see.
+  Needs more research before assuming unlimited grants are safe.
+
 ### Not yet a candidate item type
 
 - **Health/stamina/stats** (`research/game-hooks.md`'s "other confirmed

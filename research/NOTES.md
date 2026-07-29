@@ -724,3 +724,245 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   of where the live carried count actually lives (likely another
   UObject/component, e.g. on `UGsrItemController` or a dedicated
   food/survival component — not yet found).
+
+### 2026-07-29: Live carried-food inventory found and confirmed — via a community Cheat Engine table's code-injection hook, ported to pymem
+
+- **Context**: the previous day's session left "how many of X are you
+  actually carrying right now" as the one unsolved piece — the
+  `SnakeFoodsMemoryData` map (found 2026-07-28) is a lifetime
+  achievement log, not the live pack contents, and a separate attempt to
+  reach it via the game's own debug-menu cheat class (`CallbackAddFood`,
+  found in `Gsr.hpp`) **crashed the engine**, same failure mode as the
+  earlier `OnExecuteFullAmmo` crash (a fresh crash dump confirmed it,
+  `crash_2026_07_28_23_41_27.dmp`) — `CreateDebugMenu()` claims success
+  but doesn't actually wire up the widget references the callback reads,
+  so it dereferences null. That whole debug-menu-cheat class is now 2/2
+  crashed on every function tried; treated as a dead end, not
+  investigated further.
+- **Re-applied the lesson from how weapons got solved**: don't
+  reverse-engineer from scratch, check whether someone already solved it.
+  Web search turned up a community-maintained Cheat Engine table for this
+  exact game (`RMLSNK`, FearLess Revolution forum,
+  [`viewtopic.php?t=36267`](https://fearlessrevolution.com/viewtopic.php?t=36267)) —
+  unlike the vendored C# trainer (which has zero food support, confirmed
+  by grepping its full source), this table's changelog explicitly said
+  "Version 3: includes inf. battery, Food Swapping, etc." Downloaded the
+  latest attached version (`Version 9.ct`, patch 1.1.3, 1.5MB XML) via its
+  direct phpBB attachment link (the alternative source, vgtimes.com, gates
+  its download behind an AJAX token flow that wasn't worth fighting).
+  Vendored at `research/MGS3-Delta-Trainer-ref/mgsd_ce_table_v9.ct`.
+- **What the table's "Foods" entry actually does — a fundamentally
+  different technique from every other hook in this project.**
+  `WeaponsTable`/`ItemsTable`/`SnakeFoodsMemoryData` are all *standing
+  data* at a findable address (baked into the exe, or a heap object
+  reachable via reflection) — pure reads/writes, zero crash risk. The
+  live carried-food list isn't backed by any standing structure either
+  technique can reach: it only exists as a transient value in the `rax`
+  CPU register at one specific instruction inside the game's own compiled
+  code (`.text+7A9BD33`, the function resolving "which food occupies this
+  equip-swap slot"), and only *while* that instruction executes. The
+  table's technique is a **code-injection hook**: redirect that one
+  instruction to a small allocated stub that copies `rax` out to memory
+  we control, re-executes the original two instructions, then jumps back
+  — a real trampoline/detour, patching live executable bytes, not data.
+- **Ported the hook to pure Python** (`pymem` + raw `ctypes` calls to
+  `VirtualAllocEx`/`VirtualProtectEx`/`VirtualFreeEx`, no Cheat Engine GUI
+  involved at all) in `research/probes/food_slot_hook.py`. Explicitly
+  flagged to the user beforehand that this is a different, higher risk
+  category than the weapon AOB work — corrupting the live instruction
+  stream is a real possibility if any offset/length is wrong, unlike a
+  data misread. Verified every step before writing anything: confirmed
+  the AOB pattern matches **exactly once** module-wide (no RVA filtering
+  needed, unlike `WeaponsTable`), and confirmed the 10 bytes at the patch
+  address matched the `.ct` file's documented original bytes exactly,
+  before patching. The hook install itself succeeded cleanly — game
+  stayed `Responding: True` throughout, no crash, unlike both debug-menu
+  attempts.
+- **First read attempt was incomplete, not wrong.** The `.ct` file itself
+  only exposed 12 hand-found slot addresses (3 quick-slots at `+0x00`/
+  `+0x08`/`+0x10`, plus 9 more at `+0x98` with an assumed 8-byte stride) —
+  reading those gave a plausible-looking but incomplete list. Cross-
+  checking against the real, live food menu screen (the user had it open
+  in-game) caught the gap immediately: several item counts were right but
+  incomplete. A brute-force byte scan of the full `0x400`-byte region
+  around the pointer (checking every single byte against the known valid
+  ID range, not just the 12 hand-picked offsets) revealed the true
+  structure: the extended list is actually **16 slots**, stride 8, from
+  `+0x98` through `+0x110` inclusive — the `.ct` table's author had simply
+  never found the last few by hand. Bytes at other offsets within that
+  region (e.g. `+0x9C`, `+0xA4`) also incidentally matched valid IDs but
+  were confirmed false positives (adjacent struct fields, not real slots)
+  once the true stride-8 pattern was visible; data past `+0x110` degrades
+  into obviously-unrelated repeated "matches" (e.g. id 127 at irregular
+  offsets), confirming that's past the end of the real array.
+- **Fully confirmed live, byte-for-byte, against the real screen**: read
+  all 16 extended slots + 3 quick-slots, decoded every ID against
+  `food_animal_index.json`, and the user read their actual in-game food
+  menu back to compare. One apparent mismatch (Yabloko Moloko: 6 read vs.
+  3 initially reported) turned out to be the user not having scrolled
+  down the in-game list far enough — the other 3 were further down,
+  making the true total 6, matching the read exactly. Every other item
+  (Calorie Mate, Giant Anaconda in both live and food form, Russian
+  Oyster Mushroom, Reticulated Python, Golova, Hornet's Nest) matched
+  exactly on the first read, both identity and count.
+- **Confidence**: high — this is a real, live, independently-verified
+  read of the actual carried-food inventory, not a guess or a UI cache.
+  The full technique (AOB pattern, patch offsets, trampoline structure,
+  array layout) is written up in `research/game-hooks.md`'s "Live carried
+  food/animal inventory" section.
+- **Write path confirmed live too, same session, right after**: plain
+  `write_uchar` on the 16 extended-list slot addresses, no crash, no
+  extra handling needed. Three round trips, each visually confirmed
+  against the real in-game food menu: wrote id 70 (Hornet's Nest) to all
+  16 slots → every carried item turned into Hornet's Nest in-game; wrote
+  0 (empty) to all 16 → food list went empty in-game; wrote 70 again →
+  full list back. This is a real, working grant/remove mechanism, not
+  just a read — closes out the original ask that started this whole
+  investigation (remove food from inventory via direct memory
+  manipulation).
+- **Pointer stability, one data point**: the user closed and reopened the
+  food menu screen between the read-confirmation step and the first
+  write test. `getFoods` held the exact same pointer value throughout,
+  and the write still landed correctly — evidence (not proof) that this
+  points at persistent player inventory state, not a screen-scoped
+  scratch buffer that gets freed/reallocated on menu close. Worth
+  re-verifying in a future session rather than assuming it always holds.
+- **Separate-array confirmation**: the quick-hotbar slot (`+0x00`) held a
+  live-caught Giant Anaconda (id 104, live-animal range) throughout all
+  three extended-list writes above and was never touched by them —
+  confirms the hotbar and the 16-slot extended list are genuinely
+  separate arrays, matching the layout write-up in `game-hooks.md`.
+- **Still open**: `food_slot_hook.py`'s hook is still installed live in
+  the game as of this entry — `disable_hook()` hasn't been called this
+  session. Should be run before ending the session to restore the
+  original 10 bytes and free the code cave; this is live code patching
+  and shouldn't be left in place indefinitely.
+
+### 2026-07-29: Equipped camo write attempt #3 — direct field write on `CurrentInfo` also fails, but with a new, specific answer why
+
+- **Context**: with weapons/items/food all solved, equipped camo/facepaint
+  was the one remaining gap. The previous session's `CurrentInfo` read
+  (`UUE4PairingCamouflageManager.CurrentInfo.Camouf`/`.facepaint`) was
+  confirmed accurate against a real screenshot, but write had two failed
+  attempts already: the `MainPointerRegionOffset` pointer chain (proven
+  connected to nothing at all) and calling `UpdateCamouflageByNoPairing`
+  directly (crashed the engine). Never tried: a plain field write on
+  `CurrentInfo` itself, bypassing both the bad pointer chain and the
+  crash-prone function call — flagged as a real gap in yesterday's entry.
+- **Found the exact static offsets from `CXXHeaderDump`'s `MGS3.hpp`**,
+  no TMap/array work needed this time (unlike food): `CurrentInfo` sits
+  at a fixed `+0x210` inside `UUE4PairingCamouflageManager`, and within
+  that, `FCamouflageInfo.facepaint` is `+0x00`, `.Camouf` is `+0x04`
+  (both plain `int32`). Got the manager's live object address the same
+  way as `SnakeFoodsMemoryData`'s address last session (`FindFirstOf` +
+  `:GetAddress()`, one safe UE4SS reflection call), then computed both
+  field addresses directly — added as a new `Ctrl+C` probe in
+  `FrogFlagReaderMod`. Cross-checked the computed addresses against a
+  live reflection read of the same fields before touching anything
+  (`Camouf=11`, `facepaint=25` from both paths, exact match) and
+  independently re-confirmed via a separate `pymem` read — high
+  confidence these are the right addresses before any write.
+- **The write (plain `pm.write_int`, zero risk — not a function call, not
+  code patching, same class as every other confirmed-safe field write
+  this project) landed and read back correctly immediately after**
+  (`Camouf` 11→0), but **the in-game character didn't change at all**
+  (still shirtless/"Naked" — the *pre-write* look, matching `Camouf=11`,
+  not the plain-olive-drab look `Camouf=0` is confirmed to render as).
+  Re-read the address moments later with no further writes: **it had
+  reverted to `11` on its own.**
+- **This is a more specific, more useful negative result than the
+  previous two failures.** It's not just "this address doesn't affect
+  rendering" — the value actively getting overwritten back to the real
+  state means `CurrentInfo` is a **downstream mirror that gets
+  continuously re-synced from the true authoritative source**, not a
+  stale cache read once, and not something that silently ignores writes
+  either. That's *why* reading it always matches the real screen (kept
+  fresh by whatever's syncing it) and *why* writing it never sticks (next
+  sync tick clobbers it again). Confirms there's a genuine upstream
+  source still to find — `CurrentInfo` itself is conclusively ruled out
+  as a write target, in a way the previous two failures didn't establish
+  as clearly.
+- **Confidence**: high on the negative result and its explanation (three
+  independent confirmations: no visual change, and an unprompted revert
+  back to the real value on a follow-up read). Zero progress yet on
+  finding the actual upstream source — whatever writes *into*
+  `CurrentInfo` each sync is the next thing to find, likely by hooking
+  wherever that sync happens (a native function, probably called every
+  tick or on relevant state changes) rather than reading/writing data
+  directly.
+- **Follow-up**: same category of investigation that solved food's
+  carried-count — look for a native function that writes to
+  `CurrentInfo` (candidates: something on `UUE4PairingCamouflageManager`
+  itself, or called by whatever owns `SnakeGroupInfo`), and consider
+  whether hooking *that* function (capturing what it's about to write, or
+  redirecting its source) is more promising than continuing to chase
+  `CurrentInfo`'s own address.
+
+### 2026-07-29: Equipped camo — value-scan attempt finds three more mirrors (still not the source), then a new crash cause found the hard way
+
+- **Approach**: rather than more reflection/decompilation work, tried a
+  direct Cheat-Engine-style value scan implemented in pure `pymem`/
+  `ctypes` (`research/probes/value_scanner.py`) — walk every committed,
+  readable, `MEM_PRIVATE` region (explicitly excluding `MEM_IMAGE`/
+  `MEM_MAPPED`, since dynamic UObject state lives on the heap, not baked
+  into a module image), record every 4-byte-aligned `int32` match for the
+  current `Camouf` value, then narrow by having the user change camo
+  in-game and re-checking which candidates now hold the new value.
+- **First pass**: granted all 54 camo items via the existing `ItemsTable`
+  AOB write (so the user could freely switch outfits to generate distinct
+  test values) — first scan for value `11` found **1,069,264** candidates
+  across 49,363 private regions. Narrowed to 273 after switching to
+  Scientist (`13`), then to exactly **4** after switching to a third camo
+  (`59`) — a real, working narrowing funnel, same shape as the food
+  investigation.
+- **All 4 survivors tested by direct write, none is the real source**:
+  one was the already-known `CurrentInfo.Camouf` mirror; the other three
+  were genuinely new addresses on distant heap regions. Wrote a new value
+  to each in turn (plain `int32` writes, same low-risk class as
+  everything else) — **zero visual change** on any of them, and every
+  one **silently reverted to the real value on its own** shortly after,
+  same "continuously re-synced mirror" signature as `CurrentInfo` itself.
+  So there are at least **4 independent downstream mirrors** of equipped
+  camo state, and the real authoritative source is none of them.
+- **Working theory for why the scan missed it**: the scan only checked
+  4-byte-aligned `int32` matches, matching `FCamouflageInfo.Camouf`'s
+  native C++ declaration. Unreal Blueprint-exposed enum properties are
+  very often stored as `TEnumAsByte<T>` (a single byte) instead — if the
+  real source is Blueprint-side rather than on the native struct we
+  found, an int32-only scan would structurally never find it, independent
+  of how many rounds of narrowing are done.
+- **Retried with an unaligned single-byte scan** to test that theory.
+  Predictably much noisier: **14,018,774** candidates on the first pass
+  (vs. ~1M for the int32 case) — single-byte matches are far more common
+  than 4-byte sequence matches. Before attempting to narrow this (which
+  would have meant holding two multi-million-entry candidate sets in
+  Python memory simultaneously plus re-scanning all private regions
+  again), **the user's system frame rate collapsed and the game crashed**
+  — confirmed by a fresh crash dump
+  (`crash_2026_07_29_01_28_42.dmp`) and the game process's PID actually
+  changing (`18240` → `28996`), i.e. a full crash-and-relaunch, not a
+  recoverable hang.
+- **This is a new, distinct crash cause** — not a logic/function-call
+  crash like every previous one this project (`OnExecuteFullAmmo`,
+  `CallbackAddFood`), but a **resource-exhaustion crash** from an
+  unscoped full-process memory scan competing with the game for
+  RAM/CPU. No save-file corruption expected (this never touched disk),
+  and confirmed the user was back to their last checkpoint after
+  restarting, but real lost play time and a jarring experience regardless.
+- **Lesson for future work**: don't repeat an unscoped full-private-memory
+  scan, especially unaligned/byte-granularity, while the game is actually
+  running and needs to stay responsive. If this line of investigation
+  continues, scope any future scan much more tightly first (e.g., only
+  the regions immediately around already-known-relevant addresses like
+  the manager object or the 4 confirmed mirrors, not the entire process
+  address space) rather than repeating a full sweep.
+- **Session state after the crash**: the food code-injection hook
+  (`food_slot_hook.py`) is moot now — it lived in the old, now-dead
+  process, so no `disable_hook()` cleanup is needed. Every address
+  captured this session (camo manager, `getFoods` pointer, all mirror
+  candidates) is stale and would need full rediscovery in a fresh session
+  before continuing either the food or camo work.
+- **Confidence**: high on the crash cause (process PID change + matching
+  crash dump timestamp is conclusive). Camo/facepaint's real write target
+  is still unfound — ended the session here rather than push further
+  after the crash.

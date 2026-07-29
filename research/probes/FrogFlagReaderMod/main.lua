@@ -1150,6 +1150,130 @@ end
 
 RegisterKeyBind(Key.F, {ModifierKey.CONTROL}, ProbeFoodMemoryData)
 
+-- Read-only probe for a genuine direct-memory-manipulation path to food data
+-- (unlike weapons/items, SnakeFoodsMemoryData lives on a per-save, heap-
+-- allocated UUserProfileSaveGame object, not something baked into the exe at
+-- a fixed module offset, so pymem AOB scanning can't find it on its own).
+-- CXXHeaderDump's MGS3.hpp gives the exact in-object layout though:
+-- SnakeFoodsMemoryData sits at offset 0x60 (size 0x50) inside
+-- UUserProfileSaveGame, and FFoodMemoryData is a 12-byte struct (bCaptured
+-- bool@0, EatNum int32@4, Type byte@8, bHeard bool@9, bNewBadge bool@10).
+-- Only the object's own address is dynamic -- get it once via UE4SS
+-- (:GetAddress(), already used safely all session, zero function-call risk),
+-- then everything else (offset 0x60, the TMap's internal Data.Ptr/Count/Max
+-- at the very start of that region) is fixed and can be read directly via
+-- pymem from Python, no further Lua involved.
+local function ProbeFoodMapRawAddress()
+    local SaveGame = FindFirstOf("UserProfileSaveGame")
+    if not SaveGame or not SaveGame:IsValid() then
+        print("[FrogFlagReader] ProbeFoodMapRawAddress: no live UserProfileSaveGame found\n")
+        return
+    end
+    local okAddr, objAddr = pcall(function() return SaveGame:GetAddress() end)
+    if not okAddr then
+        print(string.format("[FrogFlagReader] ProbeFoodMapRawAddress: GetAddress failed: %s\n", tostring(objAddr)))
+        return
+    end
+    print(string.format("[FrogFlagReader] UserProfileSaveGame address = %d (0x%X)\n", objAddr, objAddr))
+    print(string.format("[FrogFlagReader] SnakeFoodsMemoryData field address = %d (0x%X) [= object + 0x60]\n",
+        objAddr + 0x60, objAddr + 0x60))
+    print(string.format("[FrogFlagReader] EvaFoodsMemoryData field address = %d (0x%X) [= object + 0xB0]\n",
+        objAddr + 0xB0, objAddr + 0xB0))
+end
+
+RegisterKeyBind(Key.V, {ModifierKey.CONTROL}, ProbeFoodMapRawAddress)
+
+-- Same technique as ProbeFoodMapRawAddress, applied to equipped camo/
+-- facepaint. CXXHeaderDump's MGS3.hpp gives fixed in-object offsets:
+-- UUE4PairingCamouflageManager.CurrentInfo is at +0x210, and within that
+-- FCamouflageInfo struct, facepaint is at +0x00 and Camouf at +0x04 (both
+-- int32) -- no TMap/array reverse-engineering needed this time, just a
+-- live object address. CurrentInfo is confirmed (2026-07-28) to read the
+-- real, rendered-accurate equipped state -- open question is whether
+-- writing directly here (bypassing both the bogus MainPointerRegionOffset
+-- chain and the crash-prone UpdateCamouflageByNoPairing function) actually
+-- changes what's rendered, or if the renderer reads from a separate
+-- authoritative copy that just gets mirrored into CurrentInfo on query.
+local function ProbeCamoManagerRawAddress()
+    local Manager = FindFirstOf("UE4PairingCamouflageManager")
+    if not Manager or not Manager:IsValid() then
+        print("[FrogFlagReader] ProbeCamoManagerRawAddress: no live UE4PairingCamouflageManager found\n")
+        return
+    end
+    local okAddr, objAddr = pcall(function() return Manager:GetAddress() end)
+    if not okAddr then
+        print(string.format("[FrogFlagReader] ProbeCamoManagerRawAddress: GetAddress failed: %s\n", tostring(objAddr)))
+        return
+    end
+    local facepaintAddr = objAddr + 0x210 + 0x00
+    local camoufAddr = objAddr + 0x210 + 0x04
+    print(string.format("[FrogFlagReader] UE4PairingCamouflageManager address = %d (0x%X)\n", objAddr, objAddr))
+    print(string.format("[FrogFlagReader] CurrentInfo.facepaint address = %d (0x%X)\n", facepaintAddr, facepaintAddr))
+    print(string.format("[FrogFlagReader] CurrentInfo.Camouf address = %d (0x%X)\n", camoufAddr, camoufAddr))
+    -- Cross-check against the reflection read, so we know these addresses
+    -- actually correspond to the right fields before anything touches them.
+    local okInfo, info = pcall(function() return Manager.CurrentInfo end)
+    if okInfo and info then
+        print(string.format("[FrogFlagReader] Reflection cross-check: CurrentInfo.Camouf=%s facepaint=%s\n",
+            tostring(info.Camouf), tostring(info.facepaint)))
+    end
+end
+
+RegisterKeyBind(Key.C, {ModifierKey.CONTROL}, ProbeCamoManagerRawAddress)
+
+-- CXXHeaderDump's Gsr.hpp shows CallbackAddFood(Value, DisplayText,
+-- IsIncrement) on the same debug-menu-state class as OnExecuteFullAmmo
+-- (crashed the engine 3/3 times earlier this project, uncatchable by pcall,
+-- even after the same Construct+CreateDebugMenu setup used here). Real risk
+-- of the same crash. Dumps the live food map before and after so a
+-- non-crashing call is immediately visible as a real EatNum/bCaptured
+-- change, not just "the call didn't error". Test with IsIncrement=true
+-- first (Ctrl+J) -- if the mechanism works at all, learning that on the
+-- addition side is strictly safer than committing to removal blind.
+local function TryCallbackAddFood(isIncrement)
+    if not G_DebugMenuStateInstance or not G_DebugMenuStateInstance:IsValid() then
+        print("[FrogFlagReader] TryCallbackAddFood: no constructed instance, run Ctrl+K then Ctrl+N first\n")
+        return
+    end
+
+    print(string.format("[FrogFlagReader] TryCallbackAddFood(IsIncrement=%s): BEFORE snapshot --\n", tostring(isIncrement)))
+    ProbeFoodMemoryData()
+
+    local okValueClass, valueClass = pcall(function()
+        return FindObject("Class", "IcsDebugMenuCallback")
+    end)
+    if not okValueClass or not valueClass or not valueClass:IsValid() then
+        print(string.format("[FrogFlagReader] FindObject(Class, IcsDebugMenuCallback): ok=%s valid=%s\n",
+            tostring(okValueClass), tostring(valueClass and valueClass:IsValid())))
+        return
+    end
+
+    local okDummy, dummyValue = pcall(function()
+        return StaticConstructObject(valueClass, G_DebugMenuStateInstance, 0, 0, 0, nil, false, false, nil)
+    end)
+    if not okDummy or not dummyValue or not dummyValue:IsValid() then
+        print(string.format("[FrogFlagReader] StaticConstructObject(IcsDebugMenuCallback) for AddFood: ok=%s valid=%s\n",
+            tostring(okDummy), tostring(dummyValue and dummyValue:IsValid())))
+        return
+    end
+
+    local okType, foodType = pcall(function() return G_DebugMenuStateInstance.m_addFoodType end)
+    print(string.format("[FrogFlagReader] m_addFoodType ok=%s valid=%s\n",
+        tostring(okType), tostring(okType and foodType and foodType:IsValid())))
+
+    print("[FrogFlagReader] Calling CallbackAddFood now -- if the log stops here, it crashed.\n")
+    local okCall, callErr = pcall(function()
+        G_DebugMenuStateInstance:CallbackAddFood(dummyValue, FText(""), isIncrement)
+    end)
+    print(string.format("[FrogFlagReader] CallbackAddFood ok=%s err=%s\n", tostring(okCall), tostring(callErr)))
+
+    print("[FrogFlagReader] TryCallbackAddFood: AFTER snapshot --\n")
+    ProbeFoodMemoryData()
+end
+
+RegisterKeyBind(Key.J, {ModifierKey.CONTROL}, function() TryCallbackAddFood(true) end)
+RegisterKeyBind(Key.B, {ModifierKey.CONTROL}, function() TryCallbackAddFood(false) end)
+
 -- Also try automatically a few seconds after the mod loads, in case the
 -- game is already in a gameplay session. TestGakoWrite is NOT auto-run --
 -- it has a real, permanent side effect on the save, so it only runs on the
