@@ -982,6 +982,77 @@ RegisterKeyBind(Key.T, {ModifierKey.CONTROL}, function()
     print(string.format("[FrogFlagReader] DumpUSMAP() ok=%s err=%s\n", tostring(ok), tostring(err)))
 end)
 
+-- Real camo/facepaint state lives on the native UUE4PairingCamouflageManager
+-- subsystem (found via CXXHeaderDump's MGS3.hpp), not the raw memory
+-- pointer-chain we tried first (that byte didn't match what was actually
+-- rendered -- see the conversation this session). Read-only: safe getter
+-- calls plus a direct struct-property read, no writes yet.
+local function ProbeCamouflageManager()
+    local Manager = FindFirstOf("UE4PairingCamouflageManager")
+    if not Manager or not Manager:IsValid() then
+        print("[FrogFlagReader] ProbeCamouflageManager: no live UE4PairingCamouflageManager found\n")
+        return
+    end
+
+    local okCloth, cloth = pcall(function() return Manager:GetMgsCloth() end)
+    local okFace, face = pcall(function() return Manager:GetMgsFacepaint() end)
+    local okNaked, isNaked = pcall(function() return Manager:IsNakedTypeUniform() end)
+    print(string.format(
+        "[FrogFlagReader] GetMgsCloth ok=%s val=%s | GetMgsFacepaint ok=%s val=%s | IsNakedTypeUniform ok=%s val=%s\n",
+        tostring(okCloth), tostring(cloth), tostring(okFace), tostring(face), tostring(okNaked), tostring(isNaked)
+    ))
+
+    local okInfo, info = pcall(function() return Manager.CurrentInfo end)
+    if okInfo and info then
+        local okCamouf, camouf = pcall(function() return info.Camouf end)
+        local okFacepaint, facepaint = pcall(function() return info.facepaint end)
+        print(string.format(
+            "[FrogFlagReader] CurrentInfo.Camouf ok=%s val=%s | CurrentInfo.facepaint ok=%s val=%s\n",
+            tostring(okCamouf), tostring(camouf), tostring(okFacepaint), tostring(facepaint)
+        ))
+    else
+        print("[FrogFlagReader] Failed to read CurrentInfo struct\n")
+    end
+end
+
+RegisterKeyBind(Key.G, {ModifierKey.CONTROL}, ProbeCamouflageManager)
+
+-- UpdateCamouflageByNoPairing is a native (non-Blueprint) function on
+-- UUE4PairingCamouflageManager -- much lower crash risk than the debug
+-- menu's Blueprint UberGraph functions that crashed the game earlier this
+-- session. EFacePaintType/ECamouflageType values come straight from
+-- MGS3_enums.hpp: GM_FACEPAINT_NONE=0, GM_CAMOUF_NAKED=11.
+local function TrySetNakedNoFacepaint()
+    local Manager = FindFirstOf("UE4PairingCamouflageManager")
+    if not Manager or not Manager:IsValid() then
+        print("[FrogFlagReader] TrySetNakedNoFacepaint: no live UE4PairingCamouflageManager found\n")
+        return
+    end
+
+    local okBefore, infoBefore = pcall(function() return Manager.CurrentInfo end)
+    if okBefore and infoBefore then
+        print(string.format(
+            "[FrogFlagReader] BEFORE Camouf=%s facepaint=%s\n",
+            tostring(infoBefore.Camouf), tostring(infoBefore.facepaint)
+        ))
+    end
+
+    local okCall, err = pcall(function()
+        Manager:UpdateCamouflageByNoPairing(0, 11) -- GM_FACEPAINT_NONE, GM_CAMOUF_NAKED
+    end)
+    print(string.format("[FrogFlagReader] UpdateCamouflageByNoPairing ok=%s err=%s\n", tostring(okCall), tostring(err)))
+
+    local okAfter, infoAfter = pcall(function() return Manager.CurrentInfo end)
+    if okAfter and infoAfter then
+        print(string.format(
+            "[FrogFlagReader] AFTER Camouf=%s facepaint=%s\n",
+            tostring(infoAfter.Camouf), tostring(infoAfter.facepaint)
+        ))
+    end
+end
+
+RegisterKeyBind(Key.H, {ModifierKey.CONTROL}, TrySetNakedNoFacepaint)
+
 -- Also try automatically a few seconds after the mod loads, in case the
 -- game is already in a gameplay session. TestGakoWrite is NOT auto-run --
 -- it has a real, permanent side effect on the save, so it only runs on the

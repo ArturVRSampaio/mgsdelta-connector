@@ -1,0 +1,911 @@
+{
+  "weapons": [
+    {
+      "index": 0,
+      "name": "Survival Knife",
+      "has_ammo": false,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 1,
+      "name": "Fork",
+      "has_ammo": false,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 2,
+      "name": "Cigspray",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 3,
+      "name": "Handkerchief",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 4,
+      "name": "MK22",
+      "has_ammo": true,
+      "has_clip": true,
+      "has_suppressor": true
+    },
+    {
+      "index": 5,
+      "name": "M1911A1",
+      "has_ammo": true,
+      "has_clip": true,
+      "has_suppressor": true
+    },
+    {
+      "index": 6,
+      "name": "Ez Gun",
+      "has_ammo": false,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 7,
+      "name": "SAA",
+      "has_ammo": true,
+      "has_clip": true,
+      "has_suppressor": false
+    },
+    {
+      "index": 8,
+      "name": "Patriot",
+      "has_ammo": false,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 9,
+      "name": "Scorpion",
+      "has_ammo": true,
+      "has_clip": true,
+      "has_suppressor": false
+    },
+    {
+      "index": 10,
+      "name": "XM16E1",
+      "has_ammo": true,
+      "has_clip": true,
+      "has_suppressor": true
+    },
+    {
+      "index": 11,
+      "name": "AK47",
+      "has_ammo": true,
+      "has_clip": true,
+      "has_suppressor": false
+    },
+    {
+      "index": 12,
+      "name": "M63",
+      "has_ammo": true,
+      "has_clip": true,
+      "has_suppressor": false
+    },
+    {
+      "index": 13,
+      "name": "M37",
+      "has_ammo": true,
+      "has_clip": true,
+      "has_suppressor": false
+    },
+    {
+      "index": 14,
+      "name": "SVD",
+      "has_ammo": true,
+      "has_clip": true,
+      "has_suppressor": false
+    },
+    {
+      "index": 15,
+      "name": "Mosin",
+      "has_ammo": true,
+      "has_clip": true,
+      "has_suppressor": false
+    },
+    {
+      "index": 16,
+      "name": "RPG7",
+      "has_ammo": true,
+      "has_clip": true,
+      "has_suppressor": false
+    },
+    {
+      "index": 17,
+      "name": "Torch",
+      "has_ammo": false,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 18,
+      "name": "Grenade",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 19,
+      "name": "Wp Grenade",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 20,
+      "name": "Stun Grenade",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 21,
+      "name": "Chaff Grenade",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 22,
+      "name": "Smoke Grenade",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 23,
+      "name": "Empty Magazine",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 24,
+      "name": "TNT",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 25,
+      "name": "C3",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 26,
+      "name": "Claymore",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 27,
+      "name": "Book",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 28,
+      "name": "Mousetrap",
+      "has_ammo": true,
+      "has_clip": false,
+      "has_suppressor": false
+    },
+    {
+      "index": 29,
+      "name": "Directional Microphone",
+      "has_ammo": false,
+      "has_clip": false,
+      "has_suppressor": false
+    }
+  ],
+  "items": [
+    {
+      "index": 0,
+      "name": "LIFE MEDICINE",
+      "has_capacity": true
+    },
+    {
+      "index": 1,
+      "name": "PENTAZEMIN",
+      "has_capacity": true
+    },
+    {
+      "index": 2,
+      "name": "FAKE DEATH PILL",
+      "has_capacity": true
+    },
+    {
+      "index": 3,
+      "name": "REVIVAL PILL",
+      "has_capacity": false
+    },
+    {
+      "index": 4,
+      "name": "CIGAR",
+      "has_capacity": false
+    },
+    {
+      "index": 5,
+      "name": "BINOCULARS",
+      "has_capacity": false
+    },
+    {
+      "index": 6,
+      "name": "THERMAL GOGGLES",
+      "has_capacity": false
+    },
+    {
+      "index": 7,
+      "name": "NIGHT VISION GOGGLES",
+      "has_capacity": false
+    },
+    {
+      "index": 8,
+      "name": "CAMERA",
+      "has_capacity": false
+    },
+    {
+      "index": 9,
+      "name": "MOTION DETECTOR",
+      "has_capacity": false
+    },
+    {
+      "index": 10,
+      "name": "ACTIVE SONAR",
+      "has_capacity": false
+    },
+    {
+      "index": 11,
+      "name": "MINE DETECTOR",
+      "has_capacity": false
+    },
+    {
+      "index": 12,
+      "name": "ANTI PERSONNEL SENSOR",
+      "has_capacity": false
+    },
+    {
+      "index": 13,
+      "name": "CBOX A",
+      "has_capacity": false
+    },
+    {
+      "index": 14,
+      "name": "CBOX B",
+      "has_capacity": false
+    },
+    {
+      "index": 15,
+      "name": "CBOX C",
+      "has_capacity": false
+    },
+    {
+      "index": 16,
+      "name": "CBOX D",
+      "has_capacity": false
+    },
+    {
+      "index": 17,
+      "name": "CROC CAP",
+      "has_capacity": false
+    },
+    {
+      "index": 18,
+      "name": "KEY A",
+      "has_capacity": false
+    },
+    {
+      "index": 19,
+      "name": "KEY B",
+      "has_capacity": false
+    },
+    {
+      "index": 20,
+      "name": "KEY C",
+      "has_capacity": false
+    },
+    {
+      "index": 21,
+      "name": "BANDANA",
+      "has_capacity": false
+    },
+    {
+      "index": 22,
+      "name": "STEALTH CAMO",
+      "has_capacity": false
+    },
+    {
+      "index": 23,
+      "name": "BUG JUICE",
+      "has_capacity": true
+    },
+    {
+      "index": 24,
+      "name": "MONKEY MASK",
+      "has_capacity": false
+    },
+    {
+      "index": 25,
+      "name": "AT CAMO",
+      "has_capacity": false
+    },
+    {
+      "index": 26,
+      "name": "COMPASS",
+      "has_capacity": false
+    },
+    {
+      "index": 27,
+      "name": "ITM2",
+      "has_capacity": false
+    },
+    {
+      "index": 28,
+      "name": "GAKO MASK",
+      "has_capacity": false
+    },
+    {
+      "index": 29,
+      "name": "KEROTAN MASK",
+      "has_capacity": false
+    },
+    {
+      "index": 30,
+      "name": "BANANA CAP (GOLD)",
+      "has_capacity": false
+    },
+    {
+      "index": 31,
+      "name": "BOMB CAP (GOLD)",
+      "has_capacity": false
+    },
+    {
+      "index": 32,
+      "name": "BOMB CAP",
+      "has_capacity": false
+    },
+    {
+      "index": 33,
+      "name": "CROC CAP (ONE EYED)",
+      "has_capacity": false
+    },
+    {
+      "index": 34,
+      "name": "ITM9",
+      "has_capacity": false
+    },
+    {
+      "index": 35,
+      "name": "SERUM",
+      "has_capacity": true
+    },
+    {
+      "index": 36,
+      "name": "ANTIDOTE",
+      "has_capacity": true
+    },
+    {
+      "index": 37,
+      "name": "COLD MEDICINE",
+      "has_capacity": true
+    },
+    {
+      "index": 38,
+      "name": "DIGESTIVE MEDICINE",
+      "has_capacity": true
+    },
+    {
+      "index": 39,
+      "name": "OINTMENT",
+      "has_capacity": true
+    },
+    {
+      "index": 40,
+      "name": "SPLINT",
+      "has_capacity": true
+    },
+    {
+      "index": 41,
+      "name": "DISINFECTANT",
+      "has_capacity": true
+    },
+    {
+      "index": 42,
+      "name": "STYPTIC",
+      "has_capacity": true
+    },
+    {
+      "index": 43,
+      "name": "BANDAGE",
+      "has_capacity": true
+    },
+    {
+      "index": 44,
+      "name": "SUTURE KIT",
+      "has_capacity": true
+    },
+    {
+      "index": 45,
+      "name": "KNIFE",
+      "has_capacity": false
+    },
+    {
+      "index": 46,
+      "name": "BATTERY",
+      "has_capacity": false
+    },
+    {
+      "index": 47,
+      "name": "M1911A1 SURPRESSOR",
+      "has_capacity": false
+    },
+    {
+      "index": 48,
+      "name": "MK22 SURPRESSOR",
+      "has_capacity": false
+    },
+    {
+      "index": 49,
+      "name": "XM16E1 SURPRESSOR",
+      "has_capacity": false
+    },
+    {
+      "index": 50,
+      "name": "Olive Drab",
+      "has_capacity": false
+    },
+    {
+      "index": 51,
+      "name": "Tiger Stripe",
+      "has_capacity": false
+    },
+    {
+      "index": 52,
+      "name": "Leaf",
+      "has_capacity": false
+    },
+    {
+      "index": 53,
+      "name": "Tree Bark",
+      "has_capacity": false
+    },
+    {
+      "index": 54,
+      "name": "Choco Chip",
+      "has_capacity": false
+    },
+    {
+      "index": 55,
+      "name": "Splitter",
+      "has_capacity": false
+    },
+    {
+      "index": 56,
+      "name": "Raindrop",
+      "has_capacity": false
+    },
+    {
+      "index": 57,
+      "name": "Squares",
+      "has_capacity": false
+    },
+    {
+      "index": 58,
+      "name": "Water",
+      "has_capacity": false
+    },
+    {
+      "index": 59,
+      "name": "Black",
+      "has_capacity": false
+    },
+    {
+      "index": 60,
+      "name": "Snow",
+      "has_capacity": false
+    },
+    {
+      "index": 61,
+      "name": "Naked",
+      "has_capacity": false
+    },
+    {
+      "index": 62,
+      "name": "Sneaking Suit",
+      "has_capacity": false
+    },
+    {
+      "index": 63,
+      "name": "Scientist",
+      "has_capacity": false
+    },
+    {
+      "index": 64,
+      "name": "Officer",
+      "has_capacity": false
+    },
+    {
+      "index": 65,
+      "name": "Maintenance",
+      "has_capacity": false
+    },
+    {
+      "index": 66,
+      "name": "Tuxedo",
+      "has_capacity": false
+    },
+    {
+      "index": 67,
+      "name": "Hornet Stripe",
+      "has_capacity": false
+    },
+    {
+      "index": 68,
+      "name": "Spider",
+      "has_capacity": false
+    },
+    {
+      "index": 69,
+      "name": "Moss",
+      "has_capacity": false
+    },
+    {
+      "index": 70,
+      "name": "Fire",
+      "has_capacity": false
+    },
+    {
+      "index": 71,
+      "name": "Spirit",
+      "has_capacity": false
+    },
+    {
+      "index": 72,
+      "name": "Cold War",
+      "has_capacity": false
+    },
+    {
+      "index": 73,
+      "name": "Snake",
+      "has_capacity": false
+    },
+    {
+      "index": 74,
+      "name": "Ga-Ko",
+      "has_capacity": false
+    },
+    {
+      "index": 75,
+      "name": "DesertTiger",
+      "has_capacity": false
+    },
+    {
+      "index": 76,
+      "name": "DPM",
+      "has_capacity": false
+    },
+    {
+      "index": 77,
+      "name": "Flecktarn",
+      "has_capacity": false
+    },
+    {
+      "index": 78,
+      "name": "Auscam",
+      "has_capacity": false
+    },
+    {
+      "index": 79,
+      "name": "Animals",
+      "has_capacity": false
+    },
+    {
+      "index": 80,
+      "name": "Fly",
+      "has_capacity": false
+    },
+    {
+      "index": 81,
+      "name": "Banana Camo",
+      "has_capacity": false
+    },
+    {
+      "index": 82,
+      "name": "Grenade Camo",
+      "has_capacity": false
+    },
+    {
+      "index": 83,
+      "name": "Mummy",
+      "has_capacity": false
+    },
+    {
+      "index": 84,
+      "name": "Santa",
+      "has_capacity": false
+    },
+    {
+      "index": 85,
+      "name": "Valentine",
+      "has_capacity": false
+    },
+    {
+      "index": 86,
+      "name": "Egermany",
+      "has_capacity": false
+    },
+    {
+      "index": 87,
+      "name": "WGermany",
+      "has_capacity": false
+    },
+    {
+      "index": 88,
+      "name": "SovietWoodland",
+      "has_capacity": false
+    },
+    {
+      "index": 89,
+      "name": "UrbanTiger",
+      "has_capacity": false
+    },
+    {
+      "index": 90,
+      "name": "Klmk",
+      "has_capacity": false
+    },
+    {
+      "index": 91,
+      "name": "Rainbow",
+      "has_capacity": false
+    },
+    {
+      "index": 92,
+      "name": "Chameleon",
+      "has_capacity": false
+    },
+    {
+      "index": 93,
+      "name": "Barracuda",
+      "has_capacity": false
+    },
+    {
+      "index": 94,
+      "name": "Festival",
+      "has_capacity": false
+    },
+    {
+      "index": 95,
+      "name": "DoDoDo",
+      "has_capacity": false
+    },
+    {
+      "index": 96,
+      "name": "Rock",
+      "has_capacity": false
+    },
+    {
+      "index": 97,
+      "name": "Watersnake",
+      "has_capacity": false
+    },
+    {
+      "index": 98,
+      "name": "Night Desert",
+      "has_capacity": false
+    },
+    {
+      "index": 99,
+      "name": "Swamp",
+      "has_capacity": false
+    },
+    {
+      "index": 100,
+      "name": "Anubis",
+      "has_capacity": false
+    },
+    {
+      "index": 101,
+      "name": "Bonsai",
+      "has_capacity": false
+    },
+    {
+      "index": 102,
+      "name": "Usmx",
+      "has_capacity": false
+    },
+    {
+      "index": 103,
+      "name": "White Tuxedo",
+      "has_capacity": false
+    },
+    {
+      "index": 104,
+      "name": "PW Battle Dress",
+      "has_capacity": false
+    },
+    {
+      "index": 105,
+      "name": "PW Sneaking Suit",
+      "has_capacity": false
+    },
+    {
+      "index": 106,
+      "name": "Naked Woodland",
+      "has_capacity": false
+    },
+    {
+      "index": 107,
+      "name": "Naked Ammo Belt",
+      "has_capacity": false
+    },
+    {
+      "index": 108,
+      "name": "Gold Snake",
+      "has_capacity": false
+    },
+    {
+      "index": 109,
+      "name": "Croc Suit",
+      "has_capacity": false
+    },
+    {
+      "index": 110,
+      "name": "ExtraOutfit1",
+      "has_capacity": false
+    },
+    {
+      "index": 111,
+      "name": "ExtraOutfit2",
+      "has_capacity": false
+    },
+    {
+      "index": 112,
+      "name": "ExtraOutfit3",
+      "has_capacity": false
+    },
+    {
+      "index": 113,
+      "name": "ExtraOutfit4",
+      "has_capacity": false
+    },
+    {
+      "index": 114,
+      "name": "Unknown1",
+      "has_capacity": false
+    },
+    {
+      "index": 115,
+      "name": "Unknown2",
+      "has_capacity": false
+    },
+    {
+      "index": 116,
+      "name": "No Paint",
+      "has_capacity": false
+    },
+    {
+      "index": 117,
+      "name": "Woodland",
+      "has_capacity": false
+    },
+    {
+      "index": 118,
+      "name": "Black",
+      "has_capacity": false
+    },
+    {
+      "index": 119,
+      "name": "Water",
+      "has_capacity": false
+    },
+    {
+      "index": 120,
+      "name": "Desert",
+      "has_capacity": false
+    },
+    {
+      "index": 121,
+      "name": "Splitter",
+      "has_capacity": false
+    },
+    {
+      "index": 122,
+      "name": "Snow",
+      "has_capacity": false
+    },
+    {
+      "index": 123,
+      "name": "Kabuki",
+      "has_capacity": false
+    },
+    {
+      "index": 124,
+      "name": "Zombie",
+      "has_capacity": false
+    },
+    {
+      "index": 125,
+      "name": "Oyama",
+      "has_capacity": false
+    },
+    {
+      "index": 126,
+      "name": "Mask",
+      "has_capacity": false
+    },
+    {
+      "index": 127,
+      "name": "Green",
+      "has_capacity": false
+    },
+    {
+      "index": 128,
+      "name": "Brown",
+      "has_capacity": false
+    },
+    {
+      "index": 129,
+      "name": "Infinity",
+      "has_capacity": false
+    },
+    {
+      "index": 130,
+      "name": "Soviet Union",
+      "has_capacity": false
+    },
+    {
+      "index": 131,
+      "name": "UK",
+      "has_capacity": false
+    },
+    {
+      "index": 132,
+      "name": "France",
+      "has_capacity": false
+    },
+    {
+      "index": 133,
+      "name": "Germany",
+      "has_capacity": false
+    },
+    {
+      "index": 134,
+      "name": "Italy",
+      "has_capacity": false
+    },
+    {
+      "index": 135,
+      "name": "Spain",
+      "has_capacity": false
+    },
+    {
+      "index": 136,
+      "name": "Sweden",
+      "has_capacity": false
+    },
+    {
+      "index": 137,
+      "name": "Japan",
+      "has_capacity": false
+    },
+    {
+      "index": 138,
+      "name": "USA",
+      "has_capacity": false
+    }
+  ]
+}

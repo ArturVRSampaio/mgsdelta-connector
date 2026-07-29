@@ -604,3 +604,78 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   received Archipelago items, replacing the Blueprint-reflection write side
   of the UE4SS bridge (the bridge's *read* side, e.g. duck-count detection,
   is unaffected and still fine).
+
+### 2026-07-28: Equipped camo/face-paint — the `MainPointerRegionOffset` pointer chain is bogus; the real state lives on a native subsystem, and its setter crashes
+
+- **Goal**: after stripping the fresh save's inventory (see the entry
+  above this one — same day, `inventory_tool.py strip` worked cleanly),
+  also reset the *equipped* camo/face-paint to Naked/None, since stripping
+  ownership doesn't change what's currently worn.
+- **First attempt, wrong**: `Constants.cs`' `MainPointerAddresses` enum
+  (`SnakesEquippedCamoSub = 974`, `SnakesEquippedFacepaintSub = 973`) looked
+  like a plausible lead — ported the pointer-chain resolution
+  (`HelperMethods.cs`'s `WriteToPointer`/`ReadPointerBytes`: read a pointer
+  at `module_base + 0xC532038`, dereference, then add the sub-offset) into
+  `mgs_memory.py`. Read `camo=30, facepaint=0` before touching anything.
+  Cross-referenced against the real native enums in `CXXHeaderDump`'s
+  `MGS3_enums.hpp` (`ECamouflageType`/`EFacePaintType`) — `30` does map to
+  a real enum value (`GM_CAMOUF_FLY`) and `0` to `GM_FACEPAINT_NONE`, which
+  looked like solid corroboration at the time. **It wasn't**: wrote
+  `GM_CAMOUF_NAKED` (11) there, and the in-game character didn't change at
+  all — still the same solid olive-green outfit, not the shirtless "Naked"
+  look. The enum-value coincidence was just that, a coincidence; this
+  memory location isn't connected to the actual rendered/authoritative
+  camo state. **Don't trust `MainPointerAddresses` for Delta** — as
+  suspected from the vendored trainer source itself (none of its
+  confirmed-working files actually use this pointer chain; only
+  `DebugMethodManager.cs` references it, and `AobManager.cs`'s own comment
+  flags a lot of this file as unported leftover from the original MGS3
+  trainer).
+- **Second attempt, real progress**: searched `CXXHeaderDump` for
+  "camo"/"facepaint" instead of trusting the trainer source further. Found
+  `UUE4PairingCamouflageManager` (a native `USnakeSubsystem`, in
+  `MGS3.hpp`) with a `CurrentInfo` struct (`FCamouflageInfo`: `Camouf`,
+  `facepaint`, both `int32`) plus getters (`GetMgsCloth`, `GetMgsFacepaint`,
+  `IsNakedTypeUniform`) and what looks like the real setter
+  (`UpdateCamouflageByNoPairing(EFacePaintType, ECamouflageType)`).
+  `MGS3_enums.hpp` gives the real enum values directly:
+  `ECamouflageType::GM_CAMOUF_NAKED = 11`,
+  `EFacePaintType::GM_FACEPAINT_NONE = 0`, `GM_CAMOUF_NORMAL = 0`,
+  `GM_FACEPAINT_SPLITTER = 5`.
+- **Read confirmed correct**: `FindFirstOf("UE4PairingCamouflageManager")`
+  found a live instance; reading `Manager.CurrentInfo.Camouf` /
+  `.facepaint` directly gave `Camouf=0` (`GM_CAMOUF_NORMAL`, i.e. plain
+  solid olive-green — matches the actual screenshot exactly) and
+  `facepaint=5` (`GM_FACEPAINT_SPLITTER`, a blotchy pattern — almost
+  certainly what looked like "black stripes" on the face). This is the
+  real, authoritative state, unlike the pointer-chain numbers. Calling
+  `GetMgsCloth()`/`GetMgsFacepaint()` directly failed with "UObject
+  instance is nullptr" even though the same object's `IsNakedTypeUniform()`
+  succeeded (`false`) and plain property reads worked fine — an
+  unexplained inconsistency between specific getter functions on the same
+  live object, not investigated further since the property read already
+  gave trustworthy data.
+- **Write attempt crashed the game**: calling
+  `Manager:UpdateCamouflageByNoPairing(0, 11)` (real, correct enum values,
+  confirmed via `MGS3_enums.hpp`) **crashed MGS Delta**, despite being a
+  native (non-Blueprint) function — being native didn't make it safe here.
+  Likely touches `SnakeGroupInfo`/the `OnChangeCamouflage` delegate in a
+  way that needs more setup/context than a bare call provides. This is the
+  second confirmed crash this project from calling into game logic
+  directly (the first was the Blueprint debug-menu's `OnExecuteFullAmmo`,
+  a different subsystem entirely) — **don't call
+  `UpdateCamouflageByNoPairing` again without more investigation**.
+- **Confidence**: high on the *read* side (real values, cross-referenced
+  against real enums, matching a real screenshot). Zero confidence on any
+  write path for equipped camo/facepaint — both attempted mechanisms
+  (raw pointer-chain write, and the "proper" native setter) have failed,
+  one silently (no effect) and one by crashing the game.
+- **Follow-up, not yet tried**: a direct struct-property *write*
+  (`Manager.CurrentInfo.Camouf = 11` via Lua property assignment, the same
+  style as the successful, reversible `Gako_Life` write from milestone 3)
+  instead of calling the setter function — plain property writes on simple
+  fields have been safe all session; calling into unfamiliar functions
+  (Blueprint or native) has crashed the game twice. Untested whether Lua's
+  struct property access returns a live reference or a detached copy for
+  this particular struct type, which determines whether this approach can
+  even work at all.
