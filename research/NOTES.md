@@ -679,3 +679,48 @@ source of truth that `src/mgsdelta_connector/config.py` gets built from.
   struct property access returns a live reference or a detached copy for
   this particular struct type, which determines whether this approach can
   even work at all.
+
+### 2026-07-28: Food/animal collection log confirmed readable via UE4SS reflection
+
+- **Context**: after stripping weapons/items with `inventory_tool.py`, the
+  player still had food showing in-game (food isn't part of the fixed
+  `ItemsTable` used for weapons/gear). Tried a raw-memory test first
+  (reading indices right after the mapped 139 items, on the theory the
+  table might have unused room) — got plausible-looking numbers, but a
+  live write test (index 152) produced no visible change, and none of the
+  read values matched the player's actual known state (they'd eaten a
+  specific food 7 times and had 2 currently — none of 29/3/32/54/11/95/1
+  matched either number). Concluded the `ItemsTable` region approach was
+  wrong for food.
+- **Why**: found in `CXXHeaderDump`'s `MGS3.hpp` that food is tracked in a
+  `TMap<int32, FFoodMemoryData>` (`SnakeFoodsMemoryData`/
+  `EvaFoodsMemoryData`) on `UUserProfileSaveGame` — a hash map with a
+  12-byte struct value, structurally nothing like the flat, fixed-size
+  arrays AOB scanning works on. Switched technique entirely: UE4SS
+  reflection instead of raw memory, the same way `Gako_Life`/camo's
+  `CurrentInfo` were read earlier.
+- **First reflection attempt printed wrapper objects**, not values
+  (`bCaptured=UScriptStruct: 0x...`) — same "wrapper needs `:get()`" gotcha
+  as a `RegisterHook`'s `self` from milestone 4. Fixed by calling `:get()`
+  on both the map's `Key` and `Value` before reading fields.
+- **Confirmed live**: `Food[86] bCaptured=true EatNum=7 Type=3` — matched
+  the player's real, independently-known state exactly (had eaten "Mushroom
+  E" — ID 86 in the game's own `EWeaponName` enum, which despite its name
+  covers food/animal IDs 31-130 — exactly 7 times). This is a genuine,
+  verified-correct live read, not a guess.
+- **Important limitation discovered**: this map is a **lifetime history/
+  achievement log only** (`bCaptured`, `EatNum`, never reset) — it has no
+  "currently carried count" field at all. It answers "have I ever
+  caught/eaten this" (accurately), not "how many am I carrying right now"
+  (the player's stated "I have 2 of these" has no matching field in this
+  struct). The live carried-food inventory is a different, still-unfound
+  piece of state.
+- **Confidence**: high on the read itself (independently verified against
+  a real, known value). Zero progress yet on the actual "food in your
+  backpack right now" count the original request was about.
+- **Follow-up**: full food/animal ID table (`EWeaponName` 31-130) and the
+  reflection read recipe are written up in `research/game-hooks.md`'s new
+  "Food/animal collection log" section, including the still-open question
+  of where the live carried count actually lives (likely another
+  UObject/component, e.g. on `UGsrItemController` or a dedicated
+  food/survival component — not yet found).

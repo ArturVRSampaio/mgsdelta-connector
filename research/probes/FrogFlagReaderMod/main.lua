@@ -1099,6 +1099,57 @@ end
 
 RegisterKeyBind(Key.H, {ModifierKey.CONTROL}, TrySetNakedNoFacepaintSequenced)
 
+-- Food/animal data lives in a TMap<int32, FFoodMemoryData> on
+-- UUserProfileSaveGame (SnakeFoodsMemoryData/EvaFoodsMemoryData -- see
+-- CXXHeaderDump's MGS3.hpp), NOT the flat WeaponsTable/ItemsTable AOB
+-- pattern used for weapons/items -- a raw-memory test on indices 152-160
+-- right after the item table didn't match real values (user confirmed:
+-- 7 eaten, 2 carried vs our 29/3/32/54/11/95/1), so this is read via
+-- UE4SS reflection instead, the same way Gako_Life/CurrentInfo were read
+-- earlier. Read-only -- just trying to find the live object and dump the
+-- map first, no writes yet.
+local function ProbeFoodMemoryData()
+    local SaveGame = FindFirstOf("UserProfileSaveGame")
+    if not SaveGame or not SaveGame:IsValid() then
+        print("[FrogFlagReader] ProbeFoodMemoryData: no live UserProfileSaveGame found\n")
+        return
+    end
+    print("[FrogFlagReader] Found UserProfileSaveGame\n")
+
+    local okMap, FoodMap = pcall(function() return SaveGame.SnakeFoodsMemoryData end)
+    if not okMap or not FoodMap then
+        print(string.format("[FrogFlagReader] Failed to read SnakeFoodsMemoryData ok=%s\n", tostring(okMap)))
+        return
+    end
+
+    local okForEach, err = pcall(function()
+        FoodMap:ForEach(function(Key, Value)
+            -- Key/Value come through as RemoteUnrealParam wrappers here --
+            -- same pattern as a hook's `self` earlier this session --
+            -- :get() unwraps to the real key int / real struct.
+            local okKey, realKey = pcall(function() return Key:get() end)
+            local okVal, realVal = pcall(function() return Value:get() end)
+            if not okKey or not okVal then
+                print(string.format("[FrogFlagReader] Food entry: get() failed key_ok=%s val_ok=%s\n",
+                    tostring(okKey), tostring(okVal)))
+                return
+            end
+            local okRead, bCaptured, eatNum, animalType = pcall(function()
+                return realVal.bCaptured, realVal.EatNum, realVal.Type
+            end)
+            print(string.format(
+                "[FrogFlagReader] Food[%s] ok=%s bCaptured=%s EatNum=%s Type=%s\n",
+                tostring(realKey), tostring(okRead), tostring(bCaptured), tostring(eatNum), tostring(animalType)
+            ))
+        end)
+    end)
+    if not okForEach then
+        print(string.format("[FrogFlagReader] FoodMap:ForEach failed err=%s\n", tostring(err)))
+    end
+end
+
+RegisterKeyBind(Key.F, {ModifierKey.CONTROL}, ProbeFoodMemoryData)
+
 -- Also try automatically a few seconds after the mod loads, in case the
 -- game is already in a gameplay session. TestGakoWrite is NOT auto-run --
 -- it has a real, permanent side effect on the save, so it only runs on the

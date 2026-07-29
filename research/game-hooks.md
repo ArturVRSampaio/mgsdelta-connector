@@ -171,3 +171,86 @@ ever wanted:
 
 None of these have been read/written from this project yet — listed here so
 future work doesn't have to re-derive them from the trainer source again.
+
+## Food/animal collection log — ✅ confirmed live (read-only), via UE4SS reflection, not AOB
+
+Food/animal data is **not** part of the flat `ItemsTable` above — it's a
+`TMap<int32, FFoodMemoryData>` on the live `UUserProfileSaveGame` object
+(confirmed via `CXXHeaderDump`'s `MGS3.hpp`), a completely different shape
+(hash map + a 12-byte struct: `bCaptured` bool, `EatNum` int32, `Type`
+byte enum, `bHeard` bool, `bNewBadge` bool). A raw-memory test on the
+`ItemsTable` region right after the mapped 139 items (indices 152-160)
+produced plausible-looking but **wrong** numbers — always use reflection
+for this, not AOB, since it's a real map, not a flat array.
+
+### How to read it (Lua/UE4SS)
+
+```lua
+local SaveGame = FindFirstOf("UserProfileSaveGame")
+local FoodMap = SaveGame.SnakeFoodsMemoryData -- or EvaFoodsMemoryData
+FoodMap:ForEach(function(Key, Value)
+    -- Key and Value come through as RemoteUnrealParam wrappers here,
+    -- same as a RegisterHook's `self` -- :get() unwraps to the real
+    -- int32 key / real struct, confirmed live.
+    local realKey = Key:get()
+    local realVal = Value:get()
+    -- realVal.bCaptured, realVal.EatNum, realVal.Type now read correctly
+end)
+```
+
+Confirmed live: `Food[86] bCaptured=true EatNum=7 Type=3` matched a
+real, independently-known value (player had eaten Mushroom E exactly 7
+times). **This map is a lifetime history/achievement log only** —
+`bCaptured`/`EatNum` never reset and there is no "currently carried count"
+field on it at all. The live carried-food inventory (what actually shows
+in the in-game food menu right now) is a **different, still-unfound**
+piece of state — this only answers "have I ever caught/eaten this," not
+"how many am I carrying right now."
+
+### Food/animal ID table (`EWeaponName` enum, `MGS3_enums.hpp`)
+
+Despite the enum's name, IDs 31-130 are food/animal, not weapons (0-30 and
+131+ are real weapons, including enemy-only ones). `Type` in
+`FFoodMemoryData` is a separate, coarser `EAnimalType` enum (`Snakes=0`,
+`LandAnimals=1`, `WaterfrontAnimals=2`, `Mushrooms=3`, `Others=4`) — not
+the same value space as the ID below.
+
+| ID | Name | | ID | Name |
+|---|---|---|---|---|
+| 31-46 | `FD_FoodSlot0`-`FD_FoodSlot15` (generic bait/throw slots) | | 89 | Fruit A |
+| 47-49 | `FD_AnimalSlot0`-`FD_AnimalSlot2` (generic slots) | | 90 | Fruit B |
+| 50-60 | Hebi (snake) A-K, as food | | 91 | Fruit C |
+| 61 | Crocodile, as food | | 92 | Vegetable A |
+| 62-64 | Frog A-C, as food | | 93 | Noodle |
+| 65 | Rat, as food | | 94 | Ration |
+| 66 | Rabbit, as food | | 95 | Potato |
+| 67 | Squirrel, as food | | 96 | Beehive (pain variant) |
+| 68 | Mutton, as food | | 97 | Tutinoko |
+| 69 | Bat, as food | | 98-108 | Hebi (snake) A-K, as live animal |
+| 70 | Beehive, as food | | 109 | Crocodile, as live animal |
+| 71 | Scorpion, as food | | 110-112 | Frog A-C, as live animal |
+| 72 | Spider, as food | | 113 | Rat, as live animal |
+| 73-77 | Bird A-E, as food | | 114 | Rabbit, as live animal |
+| 78-80 | Fish A-C, as food | | 115 | Squirrel, as live animal |
+| 81 | Crab, as food | | 116 | Mutton, as live animal |
+| 82-88 | Mushroom A-G, as food | | 117 | Bat, as live animal |
+| | | | 118 | Beehive, as live animal |
+| | | | 119 | Scorpion, as live animal |
+| | | | 120 | Spider, as live animal |
+| | | | 121-125 | Bird A-E, as live animal |
+| | | | 126-128 | Fish A-C, as live animal |
+| | | | 129 | Crab, as live animal |
+| | | | 130 | Tutinoko, as live animal |
+
+The "as food" (50-97) vs. "as live animal" (98-130) split matches MGS3's
+real mechanic: the same creature can be caught alive (to release/throw/use
+as bait) or consumed as food — two different inventory concepts, both
+tracked in the same `SnakeFoodsMemoryData`/`EvaFoodsMemoryData` maps.
+
+### Still unknown
+
+Where the **live carried count** (e.g. "you currently have 2 Mushroom E")
+actually lives — not this map, not the `ItemsTable`. Needs its own
+investigation, likely another live UObject/component (possibly on
+`UGsrItemController` or a dedicated food/survival component), read via the
+same reflection technique once found.
